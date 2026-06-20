@@ -1072,6 +1072,12 @@ function renderPage() {
   const container = document.getElementById('page-content');
   if (!container) return;
 
+  if (window.innerWidth <= 768 && !data.settings.sidebarCollapsed) {
+    data.settings.sidebarCollapsed = true;
+    saveData();
+    applySidebarState();
+  }
+
   // Handle Home rendering separately
   if (data.activePageId === 'home') {
     document.getElementById('breadcrumb-name').textContent = 'Home';
@@ -1257,10 +1263,10 @@ function renderPage() {
 
   // Bind page-type specific events
   if (pageType === 'notes') {
-    const editor = document.getElementById('notes-editor');
+    const editor = document.getElementById('notes-textarea');
     if (editor) {
       editor.addEventListener('input', () => {
-        page.content = editor.innerHTML;
+        page.content = editor.value;
         saveData();
       });
     }

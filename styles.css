@@ -3122,3 +3122,51 @@ body.light-theme .home-action-btn:hover {
 #notes-editor h1 { font-size: 2em; margin-bottom: 0.5em; }
 #notes-editor h2 { font-size: 1.5em; margin-bottom: 0.5em; }
 #notes-editor h3 { font-size: 1.17em; margin-bottom: 0.5em; }
+
+/* ===== Mobile Responsiveness ===== */
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column;
+  }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    height: 100vh;
+    z-index: 1000;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+  }
+  .sidebar:not(.collapsed) {
+    left: 0;
+  }
+  .sidebar.collapsed {
+    /* override the desktop collapsed state so it can slide out smoothly */
+    width: var(--sidebar-width) !important;
+    min-width: var(--sidebar-width) !important;
+    padding: 12px 8px !important;
+    opacity: 1 !important;
+    left: -100%;
+  }
+  .main {
+    width: 100%;
+    margin-left: 0;
+  }
+  .page-content {
+    padding: 16px 20px 24px;
+  }
+  .top-bar {
+    padding: 8px 12px;
+  }
+  .modal-content {
+    width: 90% !important;
+    max-width: 400px;
+  }
+  /* Show hamburger button by default on mobile so users can open the menu */
+  #btn-expand-sidebar {
+    display: inline-flex !important;
+  }
+  .form-row {
+    flex-direction: column;
+  }
+}
