@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@embedpdf/pdfium": "^2.14.4",
+    "@embedpdf/snippet": "^2.14.4",
+    "jsdom": "^29.1.1"
+  }
+}
