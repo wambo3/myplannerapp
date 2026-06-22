@@ -697,7 +697,7 @@ function makeSidebarItem(page) {
 async function renderPdfBuffer(selectedDoc, dataBuffer, canvas) {
   if (!window.pdfjsLib) return;
   // Use local worker for fully offline support
-  window.pdfjsLib.GlobalWorkerOptions.workerSrc = window.location.origin + '/lib/pdf.worker.min.js';
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = './lib/pdf.worker.min.js';
 
   try {
     const pdf = await pdfjsLib.getDocument({data: new Uint8Array(dataBuffer)}).promise;
@@ -829,7 +829,7 @@ function triggerPdfCanvasRender(selectedDoc) {
       return;
     }
     // Always use the local worker (we ship it in lib/)
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc = window.location.origin + '/lib/pdf.worker.min.js';
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = './lib/pdf.worker.min.js';
 
     const loadingTask = window.pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
     loadingTask.promise.then(pdf => {
@@ -967,7 +967,7 @@ function triggerEmbedPdfRender(selectedDoc) {
         target: container,
         src: blobUrl,
         // local wasm for fully offline operation
-        wasmUrl: window.location.origin + '/lib/pdfium.wasm',
+        wasmUrl: './lib/pdfium.wasm',
         fontFallback: null,
         fonts: {
           ui: {
@@ -4368,7 +4368,7 @@ function renderFloatingLibrary() {
         return;
       }
       // Use local worker (fully offline)
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = window.location.origin + '/lib/pdf.worker.min.js';
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = './lib/pdf.worker.min.js';
 
       const loadingTask = window.pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
       loadingTask.promise.then(pdf => {
