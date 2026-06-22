@@ -1588,7 +1588,7 @@ function renderLibraryHtml() {
 
     let taskOptions = '<option value="">-- Link to a Task --</option>';
     data.pages.forEach(p => {
-      p.tasks.forEach(t => {
+      (p.tasks || []).forEach(t => {
         const isSel = selectedDoc.linkedTaskId === t.id ? ' selected' : '';
         taskOptions += `<option value="${t.id}"${isSel}>[${escapeHtml(p.name)}] ${escapeHtml(t.name || 'Untitled task')}</option>`;
       });
@@ -4230,12 +4230,19 @@ function applySplitScreenState() {
       leftPanel.style.display = 'block';
     }
     
-    renderSplitReader();
+    // Only re-render split panel if it's not already displaying the correct document
+    const docs = data.library || [];
+    const selectedDoc = docs.find(d => d.id === data.selectedDocId) || docs[0];
+    const currentRenderedId = panel.getAttribute('data-rendered-doc-id');
+    if (!currentRenderedId || (selectedDoc && currentRenderedId !== selectedDoc.id)) {
+      renderSplitReader();
+    }
   } else {
     panel.style.display = 'none';
     leftPanel.style.display = 'block';
     btn.classList.remove('active');
     btn.style.background = 'none';
+    panel.removeAttribute('data-rendered-doc-id');
     
     // Revoke any blob URLs used in the split panel to save memory
     const container = document.getElementById('split-pdf-view-container');
@@ -4262,10 +4269,12 @@ function renderSplitReader() {
         <p style="font-size:12px; margin-top:4px; color:var(--text-muted);">Upload documents in the main Library page to view them here.</p>
       </div>
     `;
+    container.removeAttribute('data-rendered-doc-id');
     return;
   }
 
   const selectedDoc = docs.find(d => d.id === data.selectedDocId) || docs[0];
+  container.setAttribute('data-rendered-doc-id', selectedDoc.id);
 
   let docOptions = '';
   docs.forEach(doc => {
@@ -4280,7 +4289,7 @@ function renderSplitReader() {
 
   let taskOptions = '<option value="">-- Link to a Task --</option>';
   data.pages.forEach(p => {
-    p.tasks.forEach(t => {
+    (p.tasks || []).forEach(t => {
       const isSel = selectedDoc.linkedTaskId === t.id ? ' selected' : '';
       taskOptions += `<option value="${t.id}"${isSel}>[${escapeHtml(p.name)}] ${escapeHtml(t.name || 'Untitled task')}</option>`;
     });
