@@ -201,11 +201,11 @@
     </div>
 
     <!-- Page Content splitscreen wrapper -->
-    <div class="main-split-container" id="main-split-container" style="display: flex; width: 100%; height: calc(100% - 48px); overflow: hidden;">
-      <div class="split-left-panel" id="split-left-panel" style="flex: 1; height: 100%; overflow-y: auto;">
+    <div class="main-split-container" id="main-split-container" style="display: flex; width: 100%; flex: 1; min-height: 0; overflow: hidden;">
+      <div class="split-left-panel" id="split-left-panel" style="flex: 1; height: 100%; min-width: 0; overflow-y: auto;">
         <div class="page-content" id="page-content"></div>
       </div>
-      <div class="split-right-panel" id="split-right-panel" style="display: none; width: 50%; height: 100%; border-left: 1px solid var(--border-input); background: var(--bg-app); flex-direction: column; overflow: hidden; position: relative;">
+      <div class="split-right-panel" id="split-right-panel" style="display: none; width: 50%; height: 100%; min-width: 0; border-left: 1px solid var(--border-input); background: var(--bg-main); flex-direction: column; overflow: hidden; position: relative;">
       </div>
     </div>
   </main>
@@ -261,9 +261,9 @@
   </div>
 </div>
 
-<!-- Local Libraries for offline support (optional - commented because files not present in lib/) -->
-<!-- <script src="lib/jszip.min.js"></script> -->
-<!-- <script src="lib/mammoth.browser.min.js"></script> -->
+<!-- Libraries for DOCX support -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <!-- Sticky Notes Pad Widget -->
 <div class="sticky-pad-drawer" id="sticky-pad-drawer" style="display: none;">
   <div class="sticky-pad-header">

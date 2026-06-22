@@ -912,13 +912,22 @@ function triggerPdfCanvasRender(selectedDoc, customContainer = null) {
 
           textLayerDiv.addEventListener('mouseup', handleTextSelection);
 
-          const btnPrev = document.getElementById('btn-reader-prev');
-          const btnNext = document.getElementById('btn-reader-next');
-          const btnFullscreen = document.getElementById('btn-reader-fullscreen');
+          const isSplit = container.id === 'split-pdf-view-container';
+          const pageNav = container.closest('.library-reader-panel, #split-right-panel')?.querySelector('.reader-page-nav');
+          if (pageNav) {
+            pageNav.style.display = 'flex';
+          }
+          const btnPrev = document.getElementById(isSplit ? 'btn-split-prev' : 'btn-reader-prev');
+          const btnNext = document.getElementById(isSplit ? 'btn-split-next' : 'btn-reader-next');
+          const btnFullscreen = document.getElementById(isSplit ? 'btn-split-fullscreen' : 'btn-reader-fullscreen');
           const total = selectedDoc.pageCount || pdf.numPages;
-          if (btnPrev) btnPrev.disabled = selectedDoc.currentPage <= 1;
-          if (btnNext) btnNext.disabled = selectedDoc.currentPage >= total;
+          if (btnPrev) btnPrev.disabled = (selectedDoc.currentPage || 1) <= 1;
+          if (btnNext) btnNext.disabled = (selectedDoc.currentPage || 1) >= total;
           if (btnFullscreen) btnFullscreen.style.display = 'inline-block';
+          const pageSpan = pageNav?.querySelector('span');
+          if (pageSpan) {
+            pageSpan.textContent = `Page ${selectedDoc.currentPage || 1} of ${total}`;
+          }
         } catch (e) {
           console.error(e);
           container.innerHTML = '<div style="color:#ff6b6b;text-align:center;padding:40px;">Render error: ' + e.message + '</div>';
@@ -1023,9 +1032,10 @@ function triggerEmbedPdfRender(selectedDoc, customContainer = null) {
           saveData();
         }
         const total = selectedDoc.pageCount || 1;
-        const btnPrev = document.getElementById('btn-reader-prev');
-        const btnNext = document.getElementById('btn-reader-next');
-        const btnFs = document.getElementById('btn-reader-fullscreen');
+        const isSplit = container.id === 'split-pdf-view-container';
+        const btnPrev = document.getElementById(isSplit ? 'btn-split-prev' : 'btn-reader-prev');
+        const btnNext = document.getElementById(isSplit ? 'btn-split-next' : 'btn-reader-next');
+        const btnFs = document.getElementById(isSplit ? 'btn-split-fullscreen' : 'btn-reader-fullscreen');
 
         if (btnPrev) btnPrev.disabled = (selectedDoc.currentPage || 1) <= 1;
         if (btnNext) btnNext.disabled = (selectedDoc.currentPage || 1) >= total;
@@ -3653,9 +3663,15 @@ function openCoverPicker(button) {
         
         const reader = new FileReader();
         reader.onload = function(ev) {
+          const isPseudo = ['library', 'settings', 'home'].includes(data.activePageId);
           const page = getActivePage();
-          if (page) {
-            page.banner = ev.target.result; // base64 data URL
+          if (page || isPseudo) {
+            if (isPseudo) {
+              if (!data.settings.pseudoBanners) data.settings.pseudoBanners = {};
+              data.settings.pseudoBanners[data.activePageId] = ev.target.result;
+            } else {
+              page.banner = ev.target.result; // base64 data URL
+            }
             saveData();
             renderPage();
             showToast('Custom cover applied');
@@ -4380,13 +4396,22 @@ function initSplitScreen() {
       applySplitScreenState();
     };
   }
+
+  // Handle window resizing dynamically for responsive splitscreen
+  window.addEventListener('resize', () => {
+    if (data.settings.splitscreen && data.activePageId !== 'library') {
+      applySplitScreenState();
+    }
+  });
+
   applySplitScreenState();
 }
 
 function applySplitScreenState() {
   const panel = document.getElementById('split-right-panel');
   const btn = document.getElementById('btn-toggle-split');
-  if (!panel || !btn) return;
+  const leftPanel = document.getElementById('split-left-panel');
+  if (!panel || !btn || !leftPanel) return;
 
   const isSplit = !!data.settings.splitscreen;
   
@@ -4397,9 +4422,20 @@ function applySplitScreenState() {
     panel.style.display = 'flex';
     btn.classList.add('active');
     btn.style.background = 'var(--bg-hover)';
+    
+    // Mobile responsive layout
+    if (window.innerWidth <= 768) {
+      panel.style.width = '100%';
+      leftPanel.style.display = 'none';
+    } else {
+      panel.style.width = '50%';
+      leftPanel.style.display = 'block';
+    }
+    
     renderSplitReader();
   } else {
     panel.style.display = 'none';
+    leftPanel.style.display = 'block';
     btn.classList.remove('active');
     btn.style.background = 'none';
     
@@ -4553,8 +4589,6 @@ function renderSplitReader() {
   } else {
     // Non-PDF
     const textArea = document.getElementById('split-reader-text-area');
-    const btnPrev = document.getElementById('btn-split-prev');
-    const btnNext = document.getElementById('btn-split-next');
 
     getFileFromDB(selectedDoc.id).then(buffer => {
       if (!buffer) {
@@ -4569,23 +4603,44 @@ function renderSplitReader() {
         textArea.innerHTML = '<div style="text-align:center; padding:20px;">EPUB preview requires full library view.</div>';
       }
     });
+  }
 
-    if (btnPrev && btnNext) {
-      btnPrev.onclick = () => {
-        if (selectedDoc.currentPage > 1) {
-          selectedDoc.currentPage--;
-          saveData();
+  // Bind split reader navigation buttons for both PDF fallback and text/DOCX documents
+  const btnPrev = document.getElementById('btn-split-prev');
+  const btnNext = document.getElementById('btn-split-next');
+  if (btnPrev && btnNext) {
+    btnPrev.onclick = () => {
+      if ((selectedDoc.currentPage || 1) > 1) {
+        selectedDoc.currentPage = (selectedDoc.currentPage || 1) - 1;
+        saveData();
+        if (selectedDoc.type === '.pdf') {
+          const pdfContainer = document.getElementById('split-pdf-view-container');
+          if (pdfContainer && typeof pdfContainer._pdfRenderFn === 'function') {
+            pdfContainer._pdfRenderFn();
+          } else {
+            renderSplitReader();
+          }
+        } else {
           renderSplitReader();
         }
-      };
-      btnNext.onclick = () => {
-        if (selectedDoc.currentPage < totalPages) {
-          selectedDoc.currentPage++;
-          saveData();
+      }
+    };
+    btnNext.onclick = () => {
+      if ((selectedDoc.currentPage || 1) < totalPages) {
+        selectedDoc.currentPage = (selectedDoc.currentPage || 1) + 1;
+        saveData();
+        if (selectedDoc.type === '.pdf') {
+          const pdfContainer = document.getElementById('split-pdf-view-container');
+          if (pdfContainer && typeof pdfContainer._pdfRenderFn === 'function') {
+            pdfContainer._pdfRenderFn();
+          } else {
+            renderSplitReader();
+          }
+        } else {
           renderSplitReader();
         }
-      };
-    }
+      }
+    };
   }
 }
 
