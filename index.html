@@ -188,11 +188,26 @@
         </button>
         <span class="breadcrumb-text" id="breadcrumb-name">To-dos</span>
       </div>
-      <div class="top-bar-right" id="header-pomodoro-container" style="display: none;"></div>
+      <div class="top-bar-right" style="display: flex; align-items: center; gap: 12px;">
+        <button class="top-bar-btn" id="btn-toggle-split" title="Toggle Split Screen Reader" style="background: none; border: none; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 4px; transition: background 0.2s; font-size: 13px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="12" y1="3" x2="12" y2="21"/>
+          </svg>
+          <span>Split Screen</span>
+        </button>
+        <div id="header-pomodoro-container" style="display: none;"></div>
+      </div>
     </div>
 
-    <!-- Page Content (dynamically rendered) -->
-    <div class="page-content" id="page-content"></div>
+    <!-- Page Content splitscreen wrapper -->
+    <div class="main-split-container" id="main-split-container" style="display: flex; width: 100%; height: calc(100% - 48px); overflow: hidden;">
+      <div class="split-left-panel" id="split-left-panel" style="flex: 1; height: 100%; overflow-y: auto;">
+        <div class="page-content" id="page-content"></div>
+      </div>
+      <div class="split-right-panel" id="split-right-panel" style="display: none; width: 50%; height: 100%; border-left: 1px solid var(--border-input); background: var(--bg-app); flex-direction: column; overflow: hidden; position: relative;">
+      </div>
+    </div>
   </main>
 </div>
 

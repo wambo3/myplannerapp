@@ -201,6 +201,7 @@ function loadData() {
       if (parsed.settings.banners === undefined) parsed.settings.banners = true;
       if (parsed.settings.theme === undefined) parsed.settings.theme = 'dark';
       if (parsed.settings.sidebarCollapsed === undefined) parsed.settings.sidebarCollapsed = false;
+      if (parsed.settings.splitscreen === undefined) parsed.settings.splitscreen = false;
       if (!parsed.settings.categories) {
         parsed.settings.categories = ['To-dos', 'Notes', 'Journal', 'Personal', 'Work'];
       }
@@ -813,8 +814,8 @@ async function loadAndRenderSelectedDoc() {
   }
 }
 
-function triggerPdfCanvasRender(selectedDoc) {
-  const container = document.getElementById('pdf-view-container');
+function triggerPdfCanvasRender(selectedDoc, customContainer = null) {
+  const container = customContainer || document.getElementById('pdf-view-container');
   if (!container) return;
 
   container.innerHTML = '<div style="text-align:center; padding:50px; color:var(--text-muted);">Loading PDF (local PDF.js - fully offline)...</div>';
@@ -938,10 +939,10 @@ function triggerPdfCanvasRender(selectedDoc) {
 
 // EmbedPDF renderer (preferred for the main Library PDF view)
 // Uses the locally bundled @embedpdf/snippet + pdfium.wasm (fully offline, no CDN)
-function triggerEmbedPdfRender(selectedDoc) {
-  const container = document.getElementById('pdf-view-container');
+function triggerEmbedPdfRender(selectedDoc, customContainer = null) {
+  const container = customContainer || document.getElementById('pdf-view-container');
   if (!container || !window.EmbedPDF || typeof window.EmbedPDF.init !== 'function') {
-    return triggerPdfCanvasRender(selectedDoc);
+    return triggerPdfCanvasRender(selectedDoc, container);
   }
 
   container.innerHTML = '<div style="text-align:center; padding:50px; color:var(--text-muted);">Loading PDF with EmbedPDF...</div>';
@@ -1046,16 +1047,16 @@ function triggerEmbedPdfRender(selectedDoc) {
         // currentPage was already updated + saved by the caller (btn onclick)
         // Re-render just the PDF area using EmbedPDF path again
         if (window.EmbedPDF && typeof window.EmbedPDF.init === 'function') {
-          triggerEmbedPdfRender(selectedDoc);
+          triggerEmbedPdfRender(selectedDoc, container);
         } else {
-          triggerPdfCanvasRender(selectedDoc);
+          triggerPdfCanvasRender(selectedDoc, container);
         }
       };
 
     } catch (err) {
       console.error('[EmbedPDF] init error', err);
       container.innerHTML = '<div style="color:#ff6b6b;text-align:center;padding:40px;">EmbedPDF error: ' + (err.message || err) + '<br>Falling back to pdf.js...</div>';
-      setTimeout(() => triggerPdfCanvasRender(selectedDoc), 50);
+      setTimeout(() => triggerPdfCanvasRender(selectedDoc, container), 50);
     }
   }).catch(err => {
     console.error(err);
@@ -2542,9 +2543,13 @@ function navigateTo(pageId) {
   if (!page && pageId !== 'library' && pageId !== 'settings' && pageId !== 'home') return;
   data.activePageId = pageId;
   if (pageId !== 'library' && pageId !== 'settings' && pageId !== 'home') pushRecent(pageId);
+  if (pageId === 'library' && data.settings.splitscreen) {
+    data.settings.splitscreen = false;
+  }
   saveData();
   renderSidebar();
   renderPage();
+  applySplitScreenState();
 }
 
 function bindCoverEvents() {
@@ -4232,21 +4237,7 @@ function initSidebarSearch() {
     };
   }
   
-  const btnToggle = document.getElementById('btn-toggle-floating-lib');
-  const panel = document.getElementById('floating-library-panel');
-  const btnClose = document.getElementById('btn-close-floating-lib');
-  if (btnToggle && panel) {
-    btnToggle.onclick = () => {
-      if (panel.style.display === 'none') {
-        panel.style.display = 'flex';
-        renderFloatingLibrary();
-        makeFloatingLibDraggable();
-      } else {
-        panel.style.display = 'none';
-      }
-    };
-  }
-  if (btnClose && panel) btnClose.onclick = () => panel.style.display = 'none';
+  // Cleanup old floating library panel bindings
 
   const btnSearch = document.getElementById('btn-search');
   const searchContainer = document.getElementById('sidebar-search-container');
@@ -4363,6 +4354,7 @@ try {
   initSidebarSearch();
   initContextMenu();
   initTaskModal();
+  initSplitScreen();
   console.log('[APP] Initialization complete');
 } catch (e) {
   console.error('[APP INIT FAILED]', e);
@@ -4379,71 +4371,191 @@ window.deleteQuickAction = function(id) {
   }
 };
 
-function renderFloatingLibrary() {
-  const container = document.getElementById('floating-library-content');
+function initSplitScreen() {
+  const btn = document.getElementById('btn-toggle-split');
+  if (btn) {
+    btn.onclick = () => {
+      data.settings.splitscreen = !data.settings.splitscreen;
+      saveData();
+      applySplitScreenState();
+    };
+  }
+  applySplitScreenState();
+}
+
+function applySplitScreenState() {
+  const panel = document.getElementById('split-right-panel');
+  const btn = document.getElementById('btn-toggle-split');
+  if (!panel || !btn) return;
+
+  const isSplit = !!data.settings.splitscreen;
+  
+  // Hide splitscreen button on the library page to prevent double readers
+  btn.style.display = (data.activePageId === 'library') ? 'none' : 'flex';
+  
+  if (isSplit && data.activePageId !== 'library') {
+    panel.style.display = 'flex';
+    btn.classList.add('active');
+    btn.style.background = 'var(--bg-hover)';
+    renderSplitReader();
+  } else {
+    panel.style.display = 'none';
+    btn.classList.remove('active');
+    btn.style.background = 'none';
+    
+    // Revoke any blob URLs used in the split panel to save memory
+    const container = document.getElementById('split-pdf-view-container');
+    if (container && container._embedPdfBlobUrl) {
+      URL.revokeObjectURL(container._embedPdfBlobUrl);
+      container._embedPdfBlobUrl = null;
+    }
+  }
+}
+
+function renderSplitReader() {
+  const container = document.getElementById('split-right-panel');
   if (!container) return;
+
   const docs = data.library || [];
   if (docs.length === 0) {
-    container.innerHTML = '<div style="color:var(--text-muted); font-size:13px; text-align:center; margin-top:20px;">No documents uploaded. Go to Library page to upload.</div>';
+    container.innerHTML = `
+      <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; padding:20px; color:var(--text-muted); text-align:center;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px;">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+        <span style="font-size:14px; font-weight:500; color:var(--text-primary);">No documents found</span>
+        <p style="font-size:12px; margin-top:4px; color:var(--text-muted);">Upload documents in the main Library page to view them here.</p>
+      </div>
+    `;
     return;
   }
-  const selectedDoc = docs.find(d => d.id === data.selectedDocId) || docs[0];
-  
-  let options = '<select id="floating-doc-select" style="width:100%; margin-bottom:12px; background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--divider); padding:4px; border-radius:4px;">';
-  docs.forEach(doc => {
-    options += `<option value="${doc.id}" ${doc.id === selectedDoc.id ? 'selected' : ''}>${escapeHtml(doc.name)}</option>`;
-  });
-  options += '</select>';
 
-  container.innerHTML = options + `
-    <div id="floating-reader-area" style="font-size:13px; color:var(--text-primary); line-height:1.6; height:calc(100% - 40px); overflow-y:auto; border:1px solid var(--divider); border-radius:4px; padding:8px; background:rgba(255,255,255,0.02);">Loading...</div>
+  const selectedDoc = docs.find(d => d.id === data.selectedDocId) || docs[0];
+
+  let docOptions = '';
+  docs.forEach(doc => {
+    docOptions += `<option value="${doc.id}" ${doc.id === selectedDoc.id ? 'selected' : ''}>${escapeHtml(doc.name)}</option>`;
+  });
+
+  let pageOptions = '<option value="">-- Link to a Page --</option>';
+  data.pages.forEach(p => {
+    const isSel = selectedDoc.linkedPageId === p.id ? ' selected' : '';
+    pageOptions += `<option value="${p.id}"${isSel}>${escapeHtml(p.name)}</option>`;
+  });
+
+  let taskOptions = '<option value="">-- Link to a Task --</option>';
+  data.pages.forEach(p => {
+    p.tasks.forEach(t => {
+      const isSel = selectedDoc.linkedTaskId === t.id ? ' selected' : '';
+      taskOptions += `<option value="${t.id}"${isSel}>[${escapeHtml(p.name)}] ${escapeHtml(t.name || 'Untitled task')}</option>`;
+    });
+  });
+
+  let readerBodyHtml = '';
+  if (selectedDoc.type === '.pdf') {
+    readerBodyHtml = `
+      <div id="split-pdf-view-container" style="flex: 1; min-height: 250px; background: rgba(0,0,0,0.15); border-radius: 6px; overflow: hidden; width: 100%;">
+      </div>
+    `;
+  } else {
+    readerBodyHtml = `
+      <div style="flex: 1; overflow-y: auto; background: var(--bg-hover); border-radius: 6px; border: 1px solid var(--border-input); padding: 16px;">
+        <div class="paper-sheet" id="split-reader-text-area" style="font-size: 14px; line-height: 1.6; color: var(--text-primary);">
+          <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 40px 0;">Loading document...</div>
+        </div>
+      </div>
+    `;
+  }
+
+  const totalPages = selectedDoc.pageCount || (selectedDoc.pages ? selectedDoc.pages.length : 1);
+
+  container.innerHTML = `
+    <div class="split-reader-header" style="display:flex; justify-content:space-between; align-items:center; padding: 12px 16px; border-bottom: 1px solid var(--border-input);">
+      <h4 style="margin:0; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px;">${escapeHtml(selectedDoc.name)}</h4>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div class="reader-page-nav" style="${selectedDoc.type === '.pdf' ? 'display: none;' : ''}">
+          <button class="reader-nav-btn" id="btn-split-prev" ${selectedDoc.currentPage <= 1 ? 'disabled' : ''}>◀</button>
+          <span style="font-size: 11px; color: var(--text-muted);">Page ${selectedDoc.currentPage || 1} of ${totalPages}</span>
+          <button class="reader-nav-btn" id="btn-split-next" ${selectedDoc.currentPage >= totalPages ? 'disabled' : ''}>▶</button>
+        </div>
+        <button class="modal-close-btn" id="btn-close-split" style="font-size:18px; line-height:1; cursor:pointer; background:none; border:none; color:var(--text-muted);">&times;</button>
+      </div>
+    </div>
+    
+    <div class="split-reader-body" style="flex:1; display:flex; flex-direction:column; padding:12px; gap:12px; overflow:hidden; height: calc(100% - 45px);">
+      <select id="split-doc-select" style="width:100%; background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border-input); padding:6px; border-radius:4px; font-size:13px; outline:none;">
+        ${docOptions}
+      </select>
+
+      ${readerBodyHtml}
+
+      <div class="reader-split-footer" style="display:flex; flex-direction:column; gap:10px; border-top:1px solid var(--border-input); padding-top:12px; margin-top:auto;">
+        <div class="library-notes-section" style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Notes</label>
+          <textarea id="split-notes-input" style="width:100%; height:80px; background:var(--bg-hover); border:1px solid var(--border-input); border-radius:4px; padding:8px; color:var(--text-primary); font-size:13px; resize:none; outline:none;" placeholder="Type notes here...">${escapeHtml(selectedDoc.notes || '')}</textarea>
+        </div>
+        <div class="library-linking-section" style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Link Document to:</label>
+          <div class="link-select-row" style="display:flex; gap:8px;">
+            <select id="split-link-page" style="flex:1; background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border-input); padding:4px; border-radius:4px; font-size:12px; outline:none;">${pageOptions}</select>
+            <select id="split-link-task" style="flex:1; background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border-input); padding:4px; border-radius:4px; font-size:12px; outline:none;">${taskOptions}</select>
+          </div>
+        </div>
+      </div>
+    </div>
   `;
 
-  document.getElementById('floating-doc-select').onchange = (e) => {
-    data.selectedDocId = e.target.value;
+  // Bind Events
+  document.getElementById('btn-close-split').onclick = () => {
+    data.settings.splitscreen = false;
     saveData();
-    renderFloatingLibrary();
-    if (data.activePageId === 'library') renderPage();
+    applySplitScreenState();
   };
 
-  const textArea = document.getElementById('floating-reader-area');
-  
-  if (selectedDoc.type === '.pdf') {
-    textArea.style.padding = '0';
-    textArea.innerHTML = '<div style="text-align:center; padding:20px;">Loading PDF...</div>';
-    getFileFromDB(selectedDoc.id).then(buffer => {
-      if (!buffer) {
-        textArea.innerHTML = 'Document data not found.';
-        return;
-      }
-      textArea.innerHTML = '';
-      // FIXED: Use PDF.js instead of EmbedPDF
-      if (!window.pdfjsLib) {
-        textArea.innerHTML = '<div style="color:#ff6b6b;padding:20px;">PDF.js not loaded.</div>';
-        return;
-      }
-      // Use local worker (fully offline)
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = window.getAssetUrl('lib/pdf.worker.min.js');
+  document.getElementById('split-doc-select').onchange = (e) => {
+    data.selectedDocId = e.target.value;
+    saveData();
+    renderSplitReader();
+  };
 
-      const loadingTask = window.pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
-      loadingTask.promise.then(pdf => {
-        const page = pdf.getPage(1).then(p => {
-          const scale = 1.0;
-          const viewport = p.getViewport({ scale });
-          const c = document.createElement('canvas');
-          c.width = viewport.width;
-          c.height = viewport.height;
-          const ctx = c.getContext('2d');
-          p.render({ canvasContext: ctx, viewport }).promise.then(() => {
-            textArea.innerHTML = '';
-            textArea.appendChild(c);
-          });
-        });
-      }).catch(() => {
-        textArea.innerHTML = '<div style="padding:20px;">Failed to render PDF preview.</div>';
-      });
-    });
+  // Textarea notes binding
+  const notesInput = document.getElementById('split-notes-input');
+  if (notesInput) {
+    notesInput.oninput = () => {
+      selectedDoc.notes = notesInput.value;
+      saveData();
+    };
+  }
+
+  // Links page/task binding
+  const linkPage = document.getElementById('split-link-page');
+  const linkTask = document.getElementById('split-link-task');
+  if (linkPage) {
+    linkPage.onchange = () => {
+      selectedDoc.linkedPageId = linkPage.value;
+      saveData();
+      showToast('Document link updated');
+    };
+  }
+  if (linkTask) {
+    linkTask.onchange = () => {
+      selectedDoc.linkedTaskId = linkTask.value;
+      saveData();
+      showToast('Document link updated');
+    };
+  }
+
+  // Load Content
+  if (selectedDoc.type === '.pdf') {
+    const pdfContainer = document.getElementById('split-pdf-view-container');
+    triggerEmbedPdfRender(selectedDoc, pdfContainer);
   } else {
+    // Non-PDF
+    const textArea = document.getElementById('split-reader-text-area');
+    const btnPrev = document.getElementById('btn-split-prev');
+    const btnNext = document.getElementById('btn-split-next');
+
     getFileFromDB(selectedDoc.id).then(buffer => {
       if (!buffer) {
         textArea.innerHTML = 'Document data not found.';
@@ -4457,34 +4569,24 @@ function renderFloatingLibrary() {
         textArea.innerHTML = '<div style="text-align:center; padding:20px;">EPUB preview requires full library view.</div>';
       }
     });
-  }
-}
 
-function makeFloatingLibDraggable() {
-  const panel = document.getElementById('floating-library-panel');
-  const header = document.getElementById('floating-library-header');
-  if (!panel || !header) return;
-  
-  let isDragging = false;
-  let startX, startY, initialL, initialT;
-  
-  header.onmousedown = (e) => {
-    if (e.target.tagName.toLowerCase() === 'button') return;
-    isDragging = true;
-    startX = e.clientX; startY = e.clientY;
-    const rect = panel.getBoundingClientRect();
-    initialL = rect.left; initialT = rect.top;
-    panel.style.right = 'auto'; panel.style.bottom = 'auto';
-    panel.style.left = initialL + 'px'; panel.style.top = initialT + 'px';
-  };
-  
-  document.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
-    panel.style.left = Math.max(0, initialL + (e.clientX - startX)) + 'px';
-    panel.style.top = Math.max(0, initialT + (e.clientY - startY)) + 'px';
-  });
-  
-  document.addEventListener('mouseup', () => isDragging = false);
+    if (btnPrev && btnNext) {
+      btnPrev.onclick = () => {
+        if (selectedDoc.currentPage > 1) {
+          selectedDoc.currentPage--;
+          saveData();
+          renderSplitReader();
+        }
+      };
+      btnNext.onclick = () => {
+        if (selectedDoc.currentPage < totalPages) {
+          selectedDoc.currentPage++;
+          saveData();
+          renderSplitReader();
+        }
+      };
+    }
+  }
 }
 
 function bindPlannerEvents(page) {
