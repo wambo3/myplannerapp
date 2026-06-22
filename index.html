@@ -6,15 +6,26 @@
   <meta name="description" content="A sleek dark-themed task management dashboard with sidebar navigation and an interactive to-do table.">
   <title>To-dos — Dashboard</title>
   <link rel="stylesheet" href="styles.css">
+  <script>
+    window.getAssetUrl = function(relativePath) {
+      let path = window.location.pathname;
+      const lastSegment = path.substring(path.lastIndexOf('/') + 1);
+      if (path !== '/' && !path.endsWith('/') && !lastSegment.includes('.')) {
+        path += '/';
+      }
+      const directory = path.substring(0, path.lastIndexOf('/') + 1);
+      return window.location.origin + directory + relativePath;
+    };
+  </script>
   <!-- Local PDF.js (kept for legacy floating preview / non-EmbedPDF paths) -->
   <script src="./lib/pdf.min.js"></script>
   <script>
     if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = './lib/pdf.worker.min.js';
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = window.getAssetUrl('lib/pdf.worker.min.js');
     } else {
       document.addEventListener('DOMContentLoaded', () => {
         if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = './lib/pdf.worker.min.js';
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = window.getAssetUrl('lib/pdf.worker.min.js');
         }
       });
     }
@@ -25,7 +36,7 @@
   <script>
     (async () => {
       try {
-        const mod = await import('./lib/embedpdf.js');
+        const mod = await import(window.getAssetUrl('lib/embedpdf.js'));
         window.EmbedPDF = mod.default || mod.EmbedPDF || mod;
         console.log('[EmbedPDF] Loaded locally from lib/embedpdf.js');
       } catch (e) {
