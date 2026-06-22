@@ -62,19 +62,7 @@
       return window.location.origin + directory + relativePath;
     };
   </script>
-  <!-- Local PDF.js (kept for legacy floating preview / non-EmbedPDF paths) -->
-  <script src="./lib/pdf.min.js"></script>
-  <script>
-    if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = window.getAssetUrl('lib/pdf.worker.min.js');
-    } else {
-      document.addEventListener('DOMContentLoaded', () => {
-        if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = window.getAssetUrl('lib/pdf.worker.min.js');
-        }
-      });
-    }
-  </script>
+
 
   <!-- EmbedPDF scripts (bundle files are present in lib/ and PDF rendering uses EmbedPDF) -->
   <script>

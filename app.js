@@ -697,83 +697,6 @@ function makeSidebarItem(page) {
 }
 
 
-async function renderPdfBuffer(selectedDoc, dataBuffer, canvas) {
-  if (!window.pdfjsLib) return;
-  // Use local worker for fully offline support
-  window.pdfjsLib.GlobalWorkerOptions.workerSrc = window.getAssetUrl('lib/pdf.worker.min.js');
-
-  try {
-    const pdf = await pdfjsLib.getDocument({data: new Uint8Array(dataBuffer)}).promise;
-    const pageNum = selectedDoc.currentPage || 1;
-    const page = await pdf.getPage(pageNum);
-    
-    const scale = 1.3;
-    const viewport = page.getViewport({ scale: scale });
-
-    // Stack layers with absolute positioning inside relative wrapper
-    const canvasContainer = canvas.parentNode;
-    if (canvasContainer) {
-      canvasContainer.innerHTML = `
-        <div class="pdf-page-container" style="position: relative; width: ${viewport.width}px; height: ${viewport.height}px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.3); background: #fff;">
-          <canvas id="pdf-render-canvas" style="position: absolute; top: 0; left: 0; width: ${viewport.width}px; height: ${viewport.height}px; z-index: 1; pointer-events: none;"></canvas>
-          <div class="textLayer" id="pdf-text-layer" style="position: absolute; top: 0; left: 0; width: ${viewport.width}px; height: ${viewport.height}px; z-index: 2; overflow: hidden; line-height: 1; --scale-factor: 1;"></div>
-        </div>
-      `;
-    }
-
-    const newCanvas = document.getElementById('pdf-render-canvas');
-    const textLayerDiv = document.getElementById('pdf-text-layer');
-    if (!newCanvas || !textLayerDiv) return;
-
-    // Bind selection event listener to the text layer
-    textLayerDiv.addEventListener('mouseup', handleTextSelection);
-
-    // Fix scale mismatch: canvas backing buffer scaled by dpr
-    const dpr = window.devicePixelRatio || 1;
-    newCanvas.width = viewport.width * dpr;
-    newCanvas.height = viewport.height * dpr;
-    newCanvas.style.width = `${viewport.width}px`;
-    newCanvas.style.height = `${viewport.height}px`;
-
-    const context = newCanvas.getContext('2d');
-    const renderContext = {
-      canvasContext: context,
-      viewport: viewport,
-      transform: [dpr, 0, 0, dpr, 0, 0]
-    };
-
-    await page.render(renderContext).promise;
-
-    // Clean up active text layer
-    if (activeTextLayer) {
-      try {
-        activeTextLayer.cancel();
-      } catch (e) {
-        console.error("Error cancelling text layer:", e);
-      }
-      activeTextLayer = null;
-    }
-
-    // Use renderTextLayer API (PDF.js build does NOT expose TextLayer as constructor on pdfjsLib; use renderTextLayer to populate selectable text layer)
-    const textContent = page.streamTextContent ? page.streamTextContent() : page.getTextContent();
-    const textLayerTask = window.pdfjsLib.renderTextLayer({
-      textContentSource: textContent,  // preferred in this build
-      container: textLayerDiv,
-      viewport: viewport
-    });
-    activeTextLayer = textLayerTask;
-
-    // Apply highlights
-    const pageHighlights = selectedDoc.highlights.filter(h => h.page === pageNum);
-    pageHighlights.forEach(h => {
-      highlightTextInContainer(textLayerDiv, h.text, h.color);
-    });
-
-  } catch (err) {
-    console.error("Error rendering PDF:", err);
-  }
-}
-
 function waitForEmbedPDF(timeout = 4000) {
   return new Promise((resolve) => {
     const start = Date.now();
@@ -801,8 +724,11 @@ async function loadAndRenderSelectedDoc() {
       console.log('[PDF] Rendering with EmbedPDF (fully offline).');
       triggerEmbedPdfRender(selectedDoc);
     } else {
-      console.warn('[PDF] EmbedPDF failed to load in time, falling back to local PDF.js.');
-      triggerPdfCanvasRender(selectedDoc);
+      console.warn('[PDF] EmbedPDF failed to load.');
+      const container = document.getElementById('pdf-view-container');
+      if (container) {
+        container.innerHTML = '<div style="text-align:center; padding:50px; color:#ff6b6b;">Failed to load EmbedPDF.</div>';
+      }
     }
   } else {
     // fallback for docx/epub: they render inline in renderLibraryHtml already via paper-sheet
@@ -814,144 +740,17 @@ async function loadAndRenderSelectedDoc() {
   }
 }
 
-function triggerPdfCanvasRender(selectedDoc, customContainer = null) {
+async function triggerEmbedPdfRender(selectedDoc, customContainer = null) {
   const container = customContainer || document.getElementById('pdf-view-container');
   if (!container) return;
 
-  container.innerHTML = '<div style="text-align:center; padding:50px; color:var(--text-muted);">Loading PDF (local PDF.js - fully offline)...</div>';
-
-  getFileFromDB(selectedDoc.id).then(buffer => {
-    if (!buffer) {
-      container.innerHTML = '<div style="text-align:center; padding:50px; color:var(--text-muted);">Document data not found.</div>';
+  if (!window.EmbedPDF || typeof window.EmbedPDF.init !== 'function') {
+    container.innerHTML = '<div style="text-align:center; padding:50px; color:var(--text-muted);">Waiting for EmbedPDF...</div>';
+    const loaded = await waitForEmbedPDF(4000);
+    if (!loaded || !window.EmbedPDF || typeof window.EmbedPDF.init !== 'function') {
+      container.innerHTML = '<div style="text-align:center; padding:50px; color:#ff6b6b;">Failed to load EmbedPDF.</div>';
       return;
     }
-
-    // Use local PDF.js (no CDN, fully offline)
-    if (!window.pdfjsLib) {
-      container.innerHTML = '<div style="text-align:center; padding:50px; color:#ff6b6b;">PDF.js not loaded. Make sure lib/pdf.min.js exists.</div>';
-      return;
-    }
-    // Always use the local worker (we ship it in lib/)
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc = window.getAssetUrl('lib/pdf.worker.min.js');
-
-    const loadingTask = window.pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
-    loadingTask.promise.then(pdf => {
-      if (!selectedDoc.pageCount || selectedDoc.pageCount < 1) {
-        selectedDoc.pageCount = pdf.numPages;
-        saveData();
-      }
-      const pageNum = Math.min(Math.max(selectedDoc.currentPage || 1, 1), pdf.numPages);
-      selectedDoc.currentPage = pageNum;
-      saveData();
-
-      container.innerHTML = '';
-      container.style.position = 'relative';
-      container.style.overflow = 'auto';
-      container.style.background = '#222';
-
-      const renderCurrentPage = async () => {
-        container.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">Rendering page...</div>';
-        try {
-          const page = await pdf.getPage(selectedDoc.currentPage);
-
-          const scale = 1.4;
-          const viewport = page.getViewport({ scale });
-
-          const wrapper = document.createElement('div');
-          wrapper.style.position = 'relative';
-          wrapper.style.width = viewport.width + 'px';
-          wrapper.style.height = viewport.height + 'px';
-          wrapper.style.margin = '0 auto';
-          wrapper.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
-          wrapper.style.background = '#fff';
-
-          const canvas = document.createElement('canvas');
-          canvas.style.position = 'absolute';
-          canvas.style.top = '0';
-          canvas.style.left = '0';
-          canvas.style.zIndex = '1';
-          canvas.style.pointerEvents = 'none';
-
-          const textLayerDiv = document.createElement('div');
-          textLayerDiv.className = 'textLayer';
-          textLayerDiv.style.position = 'absolute';
-          textLayerDiv.style.top = '0';
-          textLayerDiv.style.left = '0';
-          textLayerDiv.style.width = viewport.width + 'px';
-          textLayerDiv.style.height = viewport.height + 'px';
-          textLayerDiv.style.zIndex = '2';
-          textLayerDiv.style.overflow = 'hidden';
-          textLayerDiv.style.lineHeight = '1';
-          textLayerDiv.style.userSelect = 'text';
-
-          wrapper.appendChild(canvas);
-          wrapper.appendChild(textLayerDiv);
-          container.appendChild(wrapper);
-
-          const dpr = window.devicePixelRatio || 1;
-          canvas.width = viewport.width * dpr;
-          canvas.height = viewport.height * dpr;
-          canvas.style.width = viewport.width + 'px';
-          canvas.style.height = viewport.height + 'px';
-
-          const ctx = canvas.getContext('2d');
-          await page.render({ canvasContext: ctx, viewport, transform: [dpr, 0, 0, dpr, 0, 0] }).promise;
-
-          const textContent = await page.getTextContent();
-          // Use renderTextLayer API (PDF.js 3.x/4.x build does NOT expose TextLayer as constructor; use renderTextLayer to populate selectable text layer for highlights/selection)
-          const textLayerTask = window.pdfjsLib.renderTextLayer({
-            textContentSource: textContent,  // preferred in this build (falls back from textContent if needed)
-            container: textLayerDiv,
-            viewport: viewport
-          });
-          activeTextLayer = textLayerTask;
-          // No .render() or await needed for basic selection + highlight re-apply (per v3 compat); highlights applied immediately after (DOM is populated synchronously enough for most cases)
-
-          const pageHighlights = (selectedDoc.highlights || []).filter(h => h.page === selectedDoc.currentPage);
-          pageHighlights.forEach(h => highlightTextInContainer(textLayerDiv, h.text, h.color));
-
-          textLayerDiv.addEventListener('mouseup', handleTextSelection);
-
-          const isSplit = container.id === 'split-pdf-view-container';
-          const pageNav = container.closest('.library-reader-panel, #split-right-panel')?.querySelector('.reader-page-nav');
-          if (pageNav) {
-            pageNav.style.display = 'flex';
-          }
-          const btnPrev = document.getElementById(isSplit ? 'btn-split-prev' : 'btn-reader-prev');
-          const btnNext = document.getElementById(isSplit ? 'btn-split-next' : 'btn-reader-next');
-          const btnFullscreen = document.getElementById(isSplit ? 'btn-split-fullscreen' : 'btn-reader-fullscreen');
-          const total = selectedDoc.pageCount || pdf.numPages;
-          if (btnPrev) btnPrev.disabled = (selectedDoc.currentPage || 1) <= 1;
-          if (btnNext) btnNext.disabled = (selectedDoc.currentPage || 1) >= total;
-          if (btnFullscreen) btnFullscreen.style.display = 'inline-block';
-          const pageSpan = pageNav?.querySelector('span');
-          if (pageSpan) {
-            pageSpan.textContent = `Page ${selectedDoc.currentPage || 1} of ${total}`;
-          }
-        } catch (e) {
-          console.error(e);
-          container.innerHTML = '<div style="color:#ff6b6b;text-align:center;padding:40px;">Render error: ' + e.message + '</div>';
-        }
-      };
-
-      renderCurrentPage();
-      container._pdfRenderFn = renderCurrentPage;
-    }).catch(err => {
-      console.error(err);
-      container.innerHTML = '<div style="text-align:center; padding:50px; color:#ff6b6b;">Failed to load PDF: ' + (err.message || err) + '</div>';
-    });
-  }).catch(err => {
-    console.error(err);
-    container.innerHTML = '<div style="text-align:center; padding:50px; color:var(--text-muted);">Failed to load from storage.</div>';
-  });
-}
-
-// EmbedPDF renderer (preferred for the main Library PDF view)
-// Uses the locally bundled @embedpdf/snippet + pdfium.wasm (fully offline, no CDN)
-function triggerEmbedPdfRender(selectedDoc, customContainer = null) {
-  const container = customContainer || document.getElementById('pdf-view-container');
-  if (!container || !window.EmbedPDF || typeof window.EmbedPDF.init !== 'function') {
-    return triggerPdfCanvasRender(selectedDoc, container);
   }
 
   container.innerHTML = '<div style="text-align:center; padding:50px; color:var(--text-muted);">Loading PDF with EmbedPDF...</div>';
@@ -1059,14 +858,13 @@ function triggerEmbedPdfRender(selectedDoc, customContainer = null) {
         if (window.EmbedPDF && typeof window.EmbedPDF.init === 'function') {
           triggerEmbedPdfRender(selectedDoc, container);
         } else {
-          triggerPdfCanvasRender(selectedDoc, container);
+          container.innerHTML = '<div style="text-align:center; padding:50px; color:#ff6b6b;">Failed to load EmbedPDF.</div>';
         }
       };
 
     } catch (err) {
       console.error('[EmbedPDF] init error', err);
-      container.innerHTML = '<div style="color:#ff6b6b;text-align:center;padding:40px;">EmbedPDF error: ' + (err.message || err) + '<br>Falling back to pdf.js...</div>';
-      setTimeout(() => triggerPdfCanvasRender(selectedDoc, container), 50);
+      container.innerHTML = '<div style="color:#ff6b6b;text-align:center;padding:40px;">EmbedPDF error: ' + (err.message || err) + '</div>';
     }
   }).catch(err => {
     console.error(err);
