@@ -1985,7 +1985,7 @@ html, body {
   border-radius: 4px;
   text-align: left;
   line-height: 1.6;
-  font-family: Georgia, Cambria, "Times New Roman", Times, serif;
+  font-family: var(--font-stack);
   overflow-wrap: break-word;
 }
 .paper-sheet h1, .paper-sheet h2, .paper-sheet h3 {
@@ -3505,4 +3505,105 @@ body.layout-compact .settings-option-group {
   margin-top: 20px;
   margin-bottom: 16px;
 }
+
+/* ===== Rich Text Editor Layout ===== */
+.rich-editor-container {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  background: var(--bg-input);
+  overflow: hidden;
+  margin-top: 10px;
+}
+.rich-editor-toolbar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-input);
+  background: var(--bg-hover);
+  flex-wrap: wrap;
+  user-select: none;
+}
+.toolbar-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font-stack);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  min-width: 28px;
+  height: 28px;
+  outline: none;
+}
+.toolbar-btn:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+.toolbar-btn.active {
+  background: var(--accent-blue);
+  color: #fff;
+}
+.toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--divider);
+  margin: 0 4px;
+}
+#notes-rich-editor {
+  min-height: 480px;
+  padding: 24px;
+  outline: none;
+  font-family: var(--font-stack);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: transparent;
+  overflow-y: auto;
+}
+#notes-rich-editor:empty::before {
+  content: attr(placeholder);
+  color: var(--text-muted);
+  opacity: 0.6;
+  pointer-events: none;
+}
+#notes-rich-editor h1 {
+  font-size: 22px;
+  font-weight: 600;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+#notes-rich-editor h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-top: 14px;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+#notes-rich-editor p {
+  margin-bottom: 12px;
+}
+#notes-rich-editor blockquote {
+  border-left: 3px solid var(--accent-blue);
+  margin: 12px 0;
+  padding-left: 16px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+#notes-rich-editor ul, #notes-rich-editor ol {
+  margin-left: 20px;
+  margin-bottom: 12px;
+}
+#notes-rich-editor li {
+  margin-bottom: 4px;
+}
+
 

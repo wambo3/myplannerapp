@@ -1033,20 +1033,49 @@ function renderPage() {
           <span>Notes</span>
         </div>
         
-        <textarea id="notes-textarea" style="
-          width: 100%; 
-          min-height: 500px; 
-          background: rgba(255,255,255,0.03); 
-          border: 1px solid rgba(255,255,255,0.08); 
-          border-radius: 8px; 
-          padding: 24px; 
-          font-size: 15px; 
-          line-height: 1.6; 
-          color: var(--text-primary);
-          font-family: var(--font-stack);
-          resize: vertical;
-          outline: none;
-        " placeholder="Start typing your notes here...">${escapeHtml(page.content || '')}</textarea>
+        <div class="rich-editor-container">
+          <div class="rich-editor-toolbar">
+            <button class="toolbar-btn" data-command="bold" title="Bold (Ctrl+B)">
+              <strong>B</strong>
+            </button>
+            <button class="toolbar-btn" data-command="italic" title="Italic (Ctrl+I)">
+              <em>I</em>
+            </button>
+            <button class="toolbar-btn" data-command="underline" title="Underline (Ctrl+U)">
+              <u>U</u>
+            </button>
+            <button class="toolbar-btn" data-command="strikeThrough" title="Strikethrough">
+              <s>S</s>
+            </button>
+            <div class="toolbar-divider"></div>
+            <button class="toolbar-btn" data-command="formatBlock" data-value="h1" title="Heading 1">
+              H1
+            </button>
+            <button class="toolbar-btn" data-command="formatBlock" data-value="h2" title="Heading 2">
+              H2
+            </button>
+            <button class="toolbar-btn" data-command="formatBlock" data-value="p" title="Paragraph">
+              P
+            </button>
+            <div class="toolbar-divider"></div>
+            <button class="toolbar-btn" data-command="insertUnorderedList" title="Bullet List">
+              &bull; List
+            </button>
+            <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List">
+              1. List
+            </button>
+            <button class="toolbar-btn" data-command="formatBlock" data-value="blockquote" title="Quote">
+              &ldquo;&rdquo;
+            </button>
+            <div class="toolbar-divider"></div>
+            <button class="toolbar-btn" data-command="removeFormat" title="Clear Formatting">
+              Clear
+            </button>
+          </div>
+          <div id="notes-rich-editor" contenteditable="true" placeholder="Start typing your notes here...">
+            ${page.content || ''}
+          </div>
+        </div>
       </div>
     `;
   } 
@@ -1088,12 +1117,70 @@ function renderPage() {
 
   // Bind page-type specific events
   if (pageType === 'notes') {
-    const editor = document.getElementById('notes-textarea');
+    const editor = document.getElementById('notes-rich-editor');
     if (editor) {
+      // Save content on input
       editor.addEventListener('input', () => {
-        page.content = editor.value;
+        page.content = editor.innerHTML;
         saveData();
       });
+
+      // Handle formatting buttons
+      document.querySelectorAll('.rich-editor-toolbar .toolbar-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const command = btn.dataset.command;
+          const value = btn.dataset.value || null;
+          
+          if (command === 'formatBlock') {
+            document.execCommand(command, false, `<${value}>`);
+          } else {
+            document.execCommand(command, false, value);
+          }
+          editor.focus();
+          
+          // Re-save content immediately
+          page.content = editor.innerHTML;
+          saveData();
+        });
+      });
+
+      // Handle paste event: clean formatting to avoid external style issues
+      editor.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+        document.execCommand('insertText', false, text);
+        
+        // Re-save content immediately
+        page.content = editor.innerHTML;
+        saveData();
+      });
+
+      // Track selection state to highlight active toolbar buttons
+      const updateToolbarActiveStates = () => {
+        document.querySelectorAll('.rich-editor-toolbar .toolbar-btn').forEach(btn => {
+          const command = btn.dataset.command;
+          if (command && command !== 'formatBlock' && command !== 'removeFormat') {
+            try {
+              const active = document.queryCommandState(command);
+              btn.classList.toggle('active', active);
+            } catch (err) {}
+          }
+        });
+      };
+      
+      editor.addEventListener('keyup', updateToolbarActiveStates);
+      editor.addEventListener('click', updateToolbarActiveStates);
+      
+      // Auto-cleanup listener when editor leaves DOM
+      const selectionListener = () => {
+        if (!document.getElementById('notes-rich-editor')) {
+          document.removeEventListener('selectionchange', selectionListener);
+          return;
+        }
+        updateToolbarActiveStates();
+      };
+      document.addEventListener('selectionchange', selectionListener);
     }
   }
 
@@ -4604,8 +4691,8 @@ function renderSplitReader() {
       </div>
     </div>
     
-    <div class="split-reader-body" style="flex:1; display:flex; flex-direction:column; padding:12px; gap:12px; overflow:hidden; height: calc(100% - 45px);">
-      <select id="split-doc-select" style="width:100%; background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border-input); padding:6px; border-radius:4px; font-size:13px; outline:none;">
+    <div class="split-reader-body" style="flex:1; display:flex; flex-direction:column; padding:12px; gap:12px; overflow:hidden; height: calc(100% - 45px); font-family: var(--font-stack);">
+      <select id="split-doc-select" style="width:100%; background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border-input); padding:6px; border-radius:4px; font-size:13px; outline:none; font-family: var(--font-stack);">
         ${docOptions}
       </select>
 
@@ -4613,14 +4700,14 @@ function renderSplitReader() {
 
       <div class="reader-split-footer" style="display:flex; flex-direction:column; gap:10px; border-top:1px solid var(--border-input); padding-top:12px; margin-top:auto;">
         <div class="library-notes-section" style="display:flex; flex-direction:column; gap:4px;">
-          <label style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Notes</label>
-          <textarea id="split-notes-input" style="width:100%; height:80px; background:var(--bg-hover); border:1px solid var(--border-input); border-radius:4px; padding:8px; color:var(--text-primary); font-size:13px; resize:none; outline:none;" placeholder="Type notes here...">${escapeHtml(selectedDoc.notes || '')}</textarea>
+          <label style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; font-family: var(--font-stack);">Notes</label>
+          <textarea id="split-notes-input" style="width:100%; height:80px; background:var(--bg-hover); border:1px solid var(--border-input); border-radius:4px; padding:8px; color:var(--text-primary); font-size:13px; resize:none; outline:none; font-family: var(--font-stack);" placeholder="Type notes here...">${escapeHtml(selectedDoc.notes || '')}</textarea>
         </div>
         <div class="library-linking-section" style="display:flex; flex-direction:column; gap:4px;">
-          <label style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Link Document to:</label>
+          <label style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; font-family: var(--font-stack);">Link Document to:</label>
           <div class="link-select-row" style="display:flex; gap:8px;">
-            <select id="split-link-page" style="flex:1; background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border-input); padding:4px; border-radius:4px; font-size:12px; outline:none;">${pageOptions}</select>
-            <select id="split-link-task" style="flex:1; background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border-input); padding:4px; border-radius:4px; font-size:12px; outline:none;">${taskOptions}</select>
+            <select id="split-link-page" style="flex:1; background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border-input); padding:4px; border-radius:4px; font-size:12px; outline:none; font-family: var(--font-stack);">${pageOptions}</select>
+            <select id="split-link-task" style="flex:1; background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border-input); padding:4px; border-radius:4px; font-size:12px; outline:none; font-family: var(--font-stack);">${taskOptions}</select>
           </div>
         </div>
       </div>
