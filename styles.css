@@ -3389,3 +3389,120 @@ body.accent-cyan .settings-card-tile.active { background: rgba(20, 184, 166, 0.0
   color: var(--text-primary);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
+
+/* Custom Color Picker Styling */
+.color-picker-wrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  background: conic-gradient(red, yellow, green, cyan, blue, magenta, red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+body.light-theme .color-picker-wrapper {
+  border-color: rgba(0, 0, 0, 0.3);
+}
+.color-picker-wrapper:hover {
+  transform: scale(1.1);
+}
+.color-picker-wrapper.active {
+  border: 2px solid var(--text-primary);
+  box-shadow: 0 0 0 2px var(--bg-main);
+  transform: scale(1.05);
+}
+.color-picker-wrapper input[type="color"] {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  width: 42px;
+  height: 42px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  opacity: 0;
+}
+.color-picker-wrapper::after {
+  content: '+';
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.color-picker-wrapper.active::after {
+  content: '✓';
+  font-size: 12px;
+}
+
+/* Sidebar Position Settings */
+body.sidebar-right .app {
+  flex-direction: row-reverse;
+}
+@media (max-width: 768px) {
+  body.sidebar-right .sidebar {
+    left: auto !important;
+    right: 0 !important;
+  }
+  body.sidebar-right .sidebar.collapsed {
+    right: -100% !important;
+    left: auto !important;
+  }
+  body.sidebar-right .sidebar:not(.collapsed) {
+    right: 0 !important;
+  }
+}
+
+/* Glassmorphism Sidebar */
+body.glass-enabled .sidebar {
+  background: rgba(37, 37, 37, 0.65) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+body.light-theme.glass-enabled .sidebar {
+  background: rgba(247, 247, 245, 0.7) !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+}
+body.theme-oled.glass-enabled .sidebar {
+  background: rgba(5, 5, 5, 0.6) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+body.theme-cream.glass-enabled .sidebar {
+  background: rgba(244, 239, 230, 0.7) !important;
+  border-right: 1px solid rgba(43, 38, 31, 0.05);
+}
+
+/* Spacing Density (Compact Mode) */
+body.layout-compact {
+  --row-height-sidebar: 26px;
+  --row-height-table: 30px;
+  --section-gap: 12px;
+}
+body.layout-compact .sidebar-item {
+  padding: 4px 6px;
+  margin-bottom: 2px;
+}
+body.layout-compact .sidebar-category-header {
+  padding: 4px 6px;
+  margin-top: 10px;
+}
+body.layout-compact .task-row td {
+  padding: 4px 8px;
+}
+body.layout-compact .new-task-cell {
+  padding: 4px 8px;
+}
+body.layout-compact .page-content {
+  padding: 20px 24px 28px;
+}
+body.layout-compact .settings-option-group {
+  margin-top: 20px;
+  margin-bottom: 16px;
+}
+

@@ -182,6 +182,9 @@ const DEFAULT_DATA = {
     fontFamily: 'sans',
     accentColor: 'blue',
     weekStart: 'sunday',
+    sidebarPosition: 'left',
+    density: 'cozy',
+    glassEffects: false,
     sidebarCollapsed: false,
     categories: ['To-dos', 'Notes', 'Journal', 'Personal', 'Work']
   },
@@ -208,6 +211,9 @@ function loadData() {
       if (parsed.settings.fontFamily === undefined) parsed.settings.fontFamily = 'sans';
       if (parsed.settings.accentColor === undefined) parsed.settings.accentColor = 'blue';
       if (parsed.settings.weekStart === undefined) parsed.settings.weekStart = 'sunday';
+      if (parsed.settings.sidebarPosition === undefined) parsed.settings.sidebarPosition = 'left';
+      if (parsed.settings.density === undefined) parsed.settings.density = 'cozy';
+      if (parsed.settings.glassEffects === undefined) parsed.settings.glassEffects = false;
       if (parsed.settings.sidebarCollapsed === undefined) parsed.settings.sidebarCollapsed = false;
       if (parsed.settings.splitscreen === undefined) parsed.settings.splitscreen = false;
       if (!parsed.settings.categories) {
@@ -3153,6 +3159,10 @@ function applyTheme() {
   const themeSubtype = data.settings.themeSubtype || (theme === 'light' ? 'white' : 'charcoal');
   const fontFamily = data.settings.fontFamily || 'sans';
   const accentColor = data.settings.accentColor || 'blue';
+  
+  const sidebarPosition = data.settings.sidebarPosition || 'left';
+  const density = data.settings.density || 'cozy';
+  const glassEffects = !!data.settings.glassEffects;
 
   document.body.classList.toggle('light-theme', theme === 'light');
 
@@ -3168,13 +3178,26 @@ function applyTheme() {
   document.body.classList.toggle('font-round', fontFamily === 'round');
   document.body.classList.toggle('font-mono', fontFamily === 'mono');
 
-  // Toggle accent colors
+  // Clear custom color inline style property
+  document.body.style.removeProperty('--accent-blue');
+
+  // Toggle preset accent colors
   document.body.classList.toggle('accent-blue', accentColor === 'blue');
   document.body.classList.toggle('accent-green', accentColor === 'green');
   document.body.classList.toggle('accent-pink', accentColor === 'pink');
   document.body.classList.toggle('accent-purple', accentColor === 'purple');
   document.body.classList.toggle('accent-yellow', accentColor === 'yellow');
   document.body.classList.toggle('accent-cyan', accentColor === 'cyan');
+
+  // Apply custom accent color if it is a hex value
+  if (accentColor.startsWith('#')) {
+    document.body.style.setProperty('--accent-blue', accentColor);
+  }
+
+  // Toggle advanced layout options
+  document.body.classList.toggle('sidebar-right', sidebarPosition === 'right');
+  document.body.classList.toggle('layout-compact', density === 'compact');
+  document.body.classList.toggle('glass-enabled', glassEffects);
 }
 
 function applySidebarState() {
@@ -3302,13 +3325,21 @@ function renderSettingsHtml() {
         <div class="settings-option-group">
           <div class="settings-option-title">Accent Brand Color</div>
           <div class="settings-option-desc">Choose the accent highlight color for buttons, links, active pages, and checkmarks.</div>
-          <div class="settings-color-bubbles">
-            <div class="color-bubble accent-option blue ${settings.accentColor === 'blue' ? 'active' : ''}" data-color="blue" style="background-color: #097fe8;" title="Classic Blue"></div>
-            <div class="color-bubble accent-option green ${settings.accentColor === 'green' ? 'active' : ''}" data-color="green" style="background-color: #10b981;" title="Emerald Green"></div>
-            <div class="color-bubble accent-option pink ${settings.accentColor === 'pink' ? 'active' : ''}" data-color="pink" style="background-color: #ec4899;" title="Sakura Pink"></div>
-            <div class="color-bubble accent-option purple ${settings.accentColor === 'purple' ? 'active' : ''}" data-color="purple" style="background-color: #8b5cf6;" title="Violet Purple"></div>
-            <div class="color-bubble accent-option yellow ${settings.accentColor === 'yellow' ? 'active' : ''}" data-color="yellow" style="background-color: #f59e0b;" title="Amber Yellow"></div>
-            <div class="color-bubble accent-option cyan ${settings.accentColor === 'cyan' ? 'active' : ''}" data-color="cyan" style="background-color: #14b8a6;" title="Teal Cyan"></div>
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div class="settings-color-bubbles" style="margin-bottom: 0;">
+              <div class="color-bubble accent-option blue ${settings.accentColor === 'blue' ? 'active' : ''}" data-color="blue" style="background-color: #097fe8;" title="Classic Blue"></div>
+              <div class="color-bubble accent-option green ${settings.accentColor === 'green' ? 'active' : ''}" data-color="green" style="background-color: #10b981;" title="Emerald Green"></div>
+              <div class="color-bubble accent-option pink ${settings.accentColor === 'pink' ? 'active' : ''}" data-color="pink" style="background-color: #ec4899;" title="Sakura Pink"></div>
+              <div class="color-bubble accent-option purple ${settings.accentColor === 'purple' ? 'active' : ''}" data-color="purple" style="background-color: #8b5cf6;" title="Violet Purple"></div>
+              <div class="color-bubble accent-option yellow ${settings.accentColor === 'yellow' ? 'active' : ''}" data-color="yellow" style="background-color: #f59e0b;" title="Amber Yellow"></div>
+              <div class="color-bubble accent-option cyan ${settings.accentColor === 'cyan' ? 'active' : ''}" data-color="cyan" style="background-color: #14b8a6;" title="Teal Cyan"></div>
+              
+              <!-- Custom Color Picker Bubble Wrapper -->
+              <div class="color-picker-wrapper ${String(settings.accentColor).startsWith('#') ? 'active' : ''}" id="custom-color-picker-wrapper" title="Pick Custom Color">
+                <input type="color" id="input-custom-color" value="${String(settings.accentColor).startsWith('#') ? settings.accentColor : '#097fe8'}">
+              </div>
+            </div>
+            ${String(settings.accentColor).startsWith('#') ? `<span class="custom-color-label" style="font-size: 11px; font-family: var(--font-stack); padding: 4px 8px; background: var(--bg-active); border-radius: 4px; border: 1px solid var(--border-input); color: var(--text-primary); font-weight: 500;">Custom: ${settings.accentColor}</span>` : ''}
           </div>
         </div>
 
@@ -3339,6 +3370,39 @@ function renderSettingsHtml() {
               <span class="settings-card-name" style="color: #2b261f;">Soft Cream</span>
               <span class="settings-card-desc" style="color: #6b6357;">Warm, sepia tone. Gentle on the eyes.</span>
             </div>
+          </div>
+        </div>
+
+        <!-- Layout & Aesthetics settings -->
+        <div class="settings-option-group">
+          <div class="settings-option-title">Sidebar Position</div>
+          <div class="settings-option-desc">Choose whether the navigation sidebar is docked on the left or right side of the window.</div>
+          <div class="settings-segmented-control">
+            <button class="segmented-btn position-option ${settings.sidebarPosition === 'left' ? 'active' : ''}" data-position="left">Left</button>
+            <button class="segmented-btn position-option ${settings.sidebarPosition === 'right' ? 'active' : ''}" data-position="right">Right</button>
+          </div>
+        </div>
+
+        <div class="settings-option-group">
+          <div class="settings-option-title">Spacing Density</div>
+          <div class="settings-option-desc">Adjust the padding and layout spacing of lists, page views, and tables.</div>
+          <div class="settings-segmented-control">
+            <button class="segmented-btn density-option ${settings.density === 'cozy' ? 'active' : ''}" data-density="cozy">Cozy Default</button>
+            <button class="segmented-btn density-option ${settings.density === 'compact' ? 'active' : ''}" data-density="compact">Compact</button>
+          </div>
+        </div>
+
+        <div class="settings-option-group">
+          <div class="settings-option-title">Frosted Glass Sidebar</div>
+          <div class="settings-option-desc">Enable frosted glass translucent blur on the navigation sidebar.</div>
+          <div class="settings-toggle-row" style="border-bottom: none; padding: 0;">
+            <div class="toggle-control" style="padding-bottom: 0;">
+              <div class="toggle-label" style="font-size: 13px;">Glassmorphism Backdrop</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggle-glass" ${settings.glassEffects ? 'checked' : ''}>
+              <span class="slider round"></span>
+            </label>
           </div>
         </div>
 
@@ -3463,10 +3527,75 @@ function bindSettingsEvents() {
       data.settings.accentColor = color;
       saveData();
       applyTheme();
-
-      // Update active class on bubbles
-      document.querySelectorAll('.accent-option').forEach(b => b.classList.toggle('active', b.dataset.color === color));
+      renderPage();
       showToast(`Accent color updated to ${color.charAt(0).toUpperCase() + color.slice(1)}`);
+    });
+  });
+
+  const inputCustomColor = document.getElementById('input-custom-color');
+  if (inputCustomColor) {
+    inputCustomColor.addEventListener('input', (e) => {
+      const color = e.target.value;
+      data.settings.accentColor = color;
+      saveData();
+      applyTheme();
+      
+      const wrapper = document.getElementById('custom-color-picker-wrapper');
+      if (wrapper) wrapper.classList.add('active');
+      document.querySelectorAll('.accent-option').forEach(b => b.classList.remove('active'));
+    });
+    inputCustomColor.addEventListener('change', () => {
+      renderPage();
+      showToast(`Custom accent color applied`);
+    });
+  }
+
+  document.querySelectorAll('.position-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const position = btn.dataset.position;
+      data.settings.sidebarPosition = position;
+      saveData();
+      applyTheme();
+      renderPage();
+      showToast(`Sidebar moved to the ${position}`);
+    });
+  });
+
+  document.querySelectorAll('.density-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const density = btn.dataset.density;
+      data.settings.density = density;
+      saveData();
+      applyTheme();
+      renderPage();
+      showToast(`Spacing density set to ${density}`);
+    });
+  });
+
+  const toggleGlass = document.getElementById('toggle-glass');
+  if (toggleGlass) {
+    toggleGlass.addEventListener('change', () => {
+      data.settings.glassEffects = toggleGlass.checked;
+      saveData();
+      applyTheme();
+      showToast(toggleGlass.checked ? 'Glassmorphism enabled' : 'Glassmorphism disabled');
+    });
+  }
+
+  document.querySelectorAll('.weekstart-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const start = btn.dataset.start;
+      data.settings.weekStart = start;
+      saveData();
+      
+      // Update active class on buttons
+      document.querySelectorAll('.weekstart-option').forEach(b => b.classList.toggle('active', b.dataset.start === start));
+      showToast(`Calendar week start updated to ${start.charAt(0).toUpperCase() + start.slice(1)}`);
+      
+      // If we are currently viewing tasks in calendar layout, re-render it
+      if (data.activeView === 'calendar') {
+        renderCalendar();
+      }
     });
   });
 
@@ -3487,23 +3616,6 @@ function bindSettingsEvents() {
       });
       
       showToast(`Theme variation updated`);
-    });
-  });
-
-  document.querySelectorAll('.weekstart-option').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const start = btn.dataset.start;
-      data.settings.weekStart = start;
-      saveData();
-      
-      // Update active class on buttons
-      document.querySelectorAll('.weekstart-option').forEach(b => b.classList.toggle('active', b.dataset.start === start));
-      showToast(`Calendar week start updated to ${start.charAt(0).toUpperCase() + start.slice(1)}`);
-      
-      // If we are currently viewing tasks in calendar layout, re-render it
-      if (data.activeView === 'calendar') {
-        renderCalendar();
-      }
     });
   });
 
