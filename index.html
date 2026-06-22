@@ -7,6 +7,51 @@
   <title>To-dos — Dashboard</title>
   <link rel="stylesheet" href="styles.css">
   <script>
+    // Diagnostic tool to show fetch failures directly on screen
+    (function() {
+      const originalFetch = window.fetch;
+      window.fetch = function(...args) {
+        return originalFetch(...args).then(response => {
+          if (!response.ok) {
+            console.error('[FETCH ERROR 404/500]', args[0], response.status);
+            showFetchError(args[0] + ' (Status ' + response.status + ')');
+          }
+          return response;
+        }).catch(err => {
+          console.error('[FETCH FAILED]', args[0], err);
+          showFetchError(args[0] + ' (Failed: ' + err.message + ')');
+          throw err;
+        });
+      };
+      
+      function showFetchError(msg) {
+        let debugDiv = document.getElementById('fetch-debug-bar');
+        if (!debugDiv) {
+          debugDiv = document.createElement('div');
+          debugDiv.id = 'fetch-debug-bar';
+          debugDiv.style.position = 'fixed';
+          debugDiv.style.bottom = '10px';
+          debugDiv.style.right = '10px';
+          debugDiv.style.background = 'rgba(255, 0, 0, 0.9)';
+          debugDiv.style.color = 'white';
+          debugDiv.style.padding = '12px 16px';
+          debugDiv.style.borderRadius = '6px';
+          debugDiv.style.zIndex = '100000';
+          debugDiv.style.fontFamily = 'monospace';
+          debugDiv.style.fontSize = '12px';
+          debugDiv.style.boxShadow = '0 4px 15px rgba(0,0,0,0.5)';
+          debugDiv.style.maxHeight = '200px';
+          debugDiv.style.overflowY = 'auto';
+          debugDiv.innerHTML = '<strong style="color: #ffc107; display: block; margin-bottom: 6px;">Network Error Logs:</strong>';
+          document.body.appendChild(debugDiv);
+        }
+        const errorLine = document.createElement('div');
+        errorLine.style.marginTop = '4px';
+        errorLine.textContent = msg;
+        debugDiv.appendChild(errorLine);
+      }
+    })();
+
     window.getAssetUrl = function(relativePath) {
       let path = window.location.pathname;
       const lastSegment = path.substring(path.lastIndexOf('/') + 1);
@@ -32,7 +77,6 @@
   </script>
 
   <!-- EmbedPDF scripts (bundle files are present in lib/ and PDF rendering uses EmbedPDF) -->
-  <script type="module" src="./lib/embedpdf.js"></script>
   <script>
     (async () => {
       try {

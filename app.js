@@ -195,6 +195,8 @@ function loadData() {
       // Settings Migration
       parsed.settings = parsed.settings || {};
       if (parsed.settings.pomodoro === undefined) parsed.settings.pomodoro = true;
+      if (parsed.settings.pomodoroWorkDuration === undefined) parsed.settings.pomodoroWorkDuration = 25;
+      if (parsed.settings.pomodoroBreakDuration === undefined) parsed.settings.pomodoroBreakDuration = 5;
       if (parsed.settings.stickyNotes === undefined) parsed.settings.stickyNotes = true;
       if (parsed.settings.banners === undefined) parsed.settings.banners = true;
       if (parsed.settings.theme === undefined) parsed.settings.theme = 'dark';
@@ -3369,6 +3371,23 @@ function renderSettingsHtml() {
           </label>
         </div>
 
+        <div class="settings-toggle-row" id="pomodoro-duration-settings" style="${settings.pomodoro ? '' : 'display: none;'} border-top: 1px solid rgba(255,255,255,0.03); padding-top: 12px; margin-top: -8px;">
+          <div class="toggle-control">
+            <div class="toggle-label" style="font-size: 13px;">Timer Durations (minutes)</div>
+            <div class="toggle-desc">Customize Pomodoro work and break intervals</div>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 12px; color: var(--text-muted);">Work:</span>
+              <input type="number" id="input-pomo-work" value="${settings.pomodoroWorkDuration || 25}" min="1" max="180" style="width: 50px; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: 4px; padding: 4px 6px; color: var(--text-primary); text-align: center; font-family: var(--font-stack); outline: none;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 12px; color: var(--text-muted);">Break:</span>
+              <input type="number" id="input-pomo-break" value="${settings.pomodoroBreakDuration || 5}" min="1" max="60" style="width: 50px; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: 4px; padding: 4px 6px; color: var(--text-primary); text-align: center; font-family: var(--font-stack); outline: none;">
+            </div>
+          </div>
+        </div>
+
         <div class="settings-toggle-row">
           <div class="toggle-control">
             <div class="toggle-label">Sticky Notes Widget</div>
@@ -3439,9 +3458,38 @@ function bindSettingsEvents() {
   if (togglePomodoro) {
     togglePomodoro.addEventListener('change', () => {
       data.settings.pomodoro = togglePomodoro.checked;
+      const durationRow = document.getElementById('pomodoro-duration-settings');
+      if (durationRow) {
+        durationRow.style.display = togglePomodoro.checked ? 'flex' : 'none';
+      }
       saveData();
       initPomodoroTimer();
       showToast('Pomodoro Timer toggled');
+    });
+  }
+
+  const inputPomoWork = document.getElementById('input-pomo-work');
+  const inputPomoBreak = document.getElementById('input-pomo-break');
+
+  if (inputPomoWork) {
+    inputPomoWork.addEventListener('change', () => {
+      let val = parseInt(inputPomoWork.value, 10);
+      if (isNaN(val) || val < 1) val = 25;
+      data.settings.pomodoroWorkDuration = val;
+      saveData();
+      initPomodoroTimer();
+      showToast('Work duration updated');
+    });
+  }
+
+  if (inputPomoBreak) {
+    inputPomoBreak.addEventListener('change', () => {
+      let val = parseInt(inputPomoBreak.value, 10);
+      if (isNaN(val) || val < 1) val = 5;
+      data.settings.pomodoroBreakDuration = val;
+      saveData();
+      initPomodoroTimer();
+      showToast('Break duration updated');
     });
   }
 
@@ -3645,6 +3693,13 @@ function initPomodoroTimer() {
     return;
   }
 
+  // Set initial seconds from settings if not running
+  if (!pomodoroIsRunning) {
+    const workMin = data.settings.pomodoroWorkDuration || 25;
+    const breakMin = data.settings.pomodoroBreakDuration || 5;
+    pomodoroSeconds = (pomodoroMode === 'work' ? workMin : breakMin) * 60;
+  }
+
   container.style.display = 'flex';
   renderPomodoroWidget();
 }
@@ -3747,11 +3802,11 @@ function togglePomodoro() {
         playTimerChime();
         if (pomodoroMode === 'work') {
           pomodoroMode = 'break';
-          pomodoroSeconds = 5 * 60;
+          pomodoroSeconds = (data.settings.pomodoroBreakDuration || 5) * 60;
           showToast("Work cycle finished! Time for a break.");
         } else {
           pomodoroMode = 'work';
-          pomodoroSeconds = 25 * 60;
+          pomodoroSeconds = (data.settings.pomodoroWorkDuration || 25) * 60;
           showToast("Break cycle finished! Back to work.");
         }
       }
@@ -3766,7 +3821,7 @@ function resetPomodoro() {
   pomodoroInterval = null;
   pomodoroIsRunning = false;
   pomodoroMode = 'work';
-  pomodoroSeconds = 25 * 60;
+  pomodoroSeconds = (data.settings.pomodoroWorkDuration || 25) * 60;
   renderPomodoroWidget();
 }
 
