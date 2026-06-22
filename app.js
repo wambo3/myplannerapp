@@ -178,6 +178,10 @@ const DEFAULT_DATA = {
     stickyNotes: true,
     banners: true,
     theme: 'dark',
+    themeSubtype: 'charcoal',
+    fontFamily: 'sans',
+    accentColor: 'blue',
+    weekStart: 'sunday',
     sidebarCollapsed: false,
     categories: ['To-dos', 'Notes', 'Journal', 'Personal', 'Work']
   },
@@ -200,6 +204,10 @@ function loadData() {
       if (parsed.settings.stickyNotes === undefined) parsed.settings.stickyNotes = true;
       if (parsed.settings.banners === undefined) parsed.settings.banners = true;
       if (parsed.settings.theme === undefined) parsed.settings.theme = 'dark';
+      if (parsed.settings.themeSubtype === undefined) parsed.settings.themeSubtype = (parsed.settings.theme === 'light' ? 'white' : 'charcoal');
+      if (parsed.settings.fontFamily === undefined) parsed.settings.fontFamily = 'sans';
+      if (parsed.settings.accentColor === undefined) parsed.settings.accentColor = 'blue';
+      if (parsed.settings.weekStart === undefined) parsed.settings.weekStart = 'sunday';
       if (parsed.settings.sidebarCollapsed === undefined) parsed.settings.sidebarCollapsed = false;
       if (parsed.settings.splitscreen === undefined) parsed.settings.splitscreen = false;
       if (!parsed.settings.categories) {
@@ -1240,12 +1248,19 @@ function renderCalendar() {
   if (!container || !page) return;
 
   const date = new Date(currentYear, currentMonth, 1);
-  const firstDayIndex = date.getDay();
   const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
   const prevLastDay = new Date(currentYear, currentMonth, 0).getDate();
   const monthName = date.toLocaleString('default', { month: 'long' });
 
-  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const weekStart = data.settings.weekStart || 'sunday';
+  let firstDayIndex = date.getDay();
+  let weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  
+  if (weekStart === 'monday') {
+    firstDayIndex = (firstDayIndex + 6) % 7;
+    weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  }
+
   const weekdayHeaders = weekdays.map(day => `<div class="calendar-weekday">${day}</div>`).join('');
 
   let cellsHtml = '';
@@ -3135,7 +3150,31 @@ function bindHomeEvents() {
 
 function applyTheme() {
   const theme = data.settings.theme || 'dark';
+  const themeSubtype = data.settings.themeSubtype || (theme === 'light' ? 'white' : 'charcoal');
+  const fontFamily = data.settings.fontFamily || 'sans';
+  const accentColor = data.settings.accentColor || 'blue';
+
   document.body.classList.toggle('light-theme', theme === 'light');
+
+  // Toggle theme subtypes
+  document.body.classList.toggle('theme-oled', theme === 'dark' && themeSubtype === 'oled');
+  document.body.classList.toggle('theme-charcoal', theme === 'dark' && themeSubtype === 'charcoal');
+  document.body.classList.toggle('theme-white', theme === 'light' && themeSubtype === 'white');
+  document.body.classList.toggle('theme-cream', theme === 'light' && themeSubtype === 'cream');
+
+  // Toggle font families
+  document.body.classList.toggle('font-sans', fontFamily === 'sans');
+  document.body.classList.toggle('font-serif', fontFamily === 'serif');
+  document.body.classList.toggle('font-round', fontFamily === 'round');
+  document.body.classList.toggle('font-mono', fontFamily === 'mono');
+
+  // Toggle accent colors
+  document.body.classList.toggle('accent-blue', accentColor === 'blue');
+  document.body.classList.toggle('accent-green', accentColor === 'green');
+  document.body.classList.toggle('accent-pink', accentColor === 'pink');
+  document.body.classList.toggle('accent-purple', accentColor === 'purple');
+  document.body.classList.toggle('accent-yellow', accentColor === 'yellow');
+  document.body.classList.toggle('accent-cyan', accentColor === 'cyan');
 }
 
 function applySidebarState() {
@@ -3152,9 +3191,10 @@ function applySidebarState() {
 
 function renderSettingsHtml() {
   const settings = data.settings || {};
+  const categories = Array.isArray(settings.categories) ? settings.categories : ['To-dos', 'Notes', 'Journal', 'Personal', 'Work'];
   
   let categoriesListHtml = '';
-  settings.categories.forEach(cat => {
+  categories.forEach(cat => {
     categoriesListHtml += `
       <div class="settings-cat-item">
         <span class="settings-cat-name">${escapeHtml(cat)}</span>
@@ -3225,15 +3265,91 @@ function renderSettingsHtml() {
       </div>
 
       <div class="settings-section">
-        <h3>Theme Customization</h3>
-        <div class="settings-toggle-row">
-          <div class="toggle-control">
-            <div class="toggle-label">Interface Theme</div>
-            <div class="toggle-desc">Switch between Dark Mode and Light Mode theme</div>
+        <h3>Workspace Personalization</h3>
+        <p class="section-desc" style="margin-bottom: 16px; font-size: 12px; color: var(--text-muted);">
+          Branding, themes, typography, and calendar preferences for this workspace.
+        </p>
+
+        <!-- Font Family Cards Selection -->
+        <div class="settings-option-group">
+          <div class="settings-option-title">Typography & Fonts</div>
+          <div class="settings-option-desc">Select the font-family style used across your entire dashboard.</div>
+          <div class="settings-grid-cards">
+            <div class="settings-card-tile font-option ${settings.fontFamily === 'sans' ? 'active' : ''}" data-font="sans" style="font-family: 'Inter', sans-serif;">
+              <span class="settings-card-preview" style="font-family: 'Inter', sans-serif;">Aa</span>
+              <span class="settings-card-name">Inter</span>
+              <span class="settings-card-desc">Sleek, modern, and highly readable.</span>
+            </div>
+            <div class="settings-card-tile font-option ${settings.fontFamily === 'serif' ? 'active' : ''}" data-font="serif" style="font-family: 'Playfair Display', serif;">
+              <span class="settings-card-preview" style="font-family: 'Playfair Display', serif;">Aa</span>
+              <span class="settings-card-name">Playfair</span>
+              <span class="settings-card-desc">Classic, elegant editorial typography.</span>
+            </div>
+            <div class="settings-card-tile font-option ${settings.fontFamily === 'round' ? 'active' : ''}" data-font="round" style="font-family: 'Outfit', sans-serif;">
+              <span class="settings-card-preview" style="font-family: 'Outfit', sans-serif;">Aa</span>
+              <span class="settings-card-name">Outfit</span>
+              <span class="settings-card-desc">Friendly, round, and highly modern.</span>
+            </div>
+            <div class="settings-card-tile font-option ${settings.fontFamily === 'mono' ? 'active' : ''}" data-font="mono" style="font-family: 'Fira Code', monospace;">
+              <span class="settings-card-preview" style="font-family: 'Fira Code', monospace;">Aa</span>
+              <span class="settings-card-name">Fira Code</span>
+              <span class="settings-card-desc">Technical, precise monospace style.</span>
+            </div>
           </div>
-          <button class="theme-toggle-btn" id="btn-theme-toggle">
-            ${settings.theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-          </button>
+        </div>
+
+        <!-- Custom Accent Theme Colors -->
+        <div class="settings-option-group">
+          <div class="settings-option-title">Accent Brand Color</div>
+          <div class="settings-option-desc">Choose the accent highlight color for buttons, links, active pages, and checkmarks.</div>
+          <div class="settings-color-bubbles">
+            <div class="color-bubble accent-option blue ${settings.accentColor === 'blue' ? 'active' : ''}" data-color="blue" style="background-color: #097fe8;" title="Classic Blue"></div>
+            <div class="color-bubble accent-option green ${settings.accentColor === 'green' ? 'active' : ''}" data-color="green" style="background-color: #10b981;" title="Emerald Green"></div>
+            <div class="color-bubble accent-option pink ${settings.accentColor === 'pink' ? 'active' : ''}" data-color="pink" style="background-color: #ec4899;" title="Sakura Pink"></div>
+            <div class="color-bubble accent-option purple ${settings.accentColor === 'purple' ? 'active' : ''}" data-color="purple" style="background-color: #8b5cf6;" title="Violet Purple"></div>
+            <div class="color-bubble accent-option yellow ${settings.accentColor === 'yellow' ? 'active' : ''}" data-color="yellow" style="background-color: #f59e0b;" title="Amber Yellow"></div>
+            <div class="color-bubble accent-option cyan ${settings.accentColor === 'cyan' ? 'active' : ''}" data-color="cyan" style="background-color: #14b8a6;" title="Teal Cyan"></div>
+          </div>
+        </div>
+
+        <!-- Theme Mode Subtypes selection -->
+        <div class="settings-option-group">
+          <div class="settings-option-title">Theme Variations</div>
+          <div class="settings-option-desc">Switch between various dark and light mode designs.</div>
+          
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--text-section); letter-spacing: 0.05em; font-weight: 600; margin-bottom: 8px;">Dark Modes</div>
+          <div class="settings-grid-cards" style="margin-bottom: 16px;">
+            <div class="settings-card-tile theme-option ${settings.theme === 'dark' && settings.themeSubtype === 'charcoal' ? 'active' : ''}" data-theme="dark" data-subtype="charcoal" style="background-color: #191919; border: 1px solid rgba(255,255,255,0.08);">
+              <span class="settings-card-name" style="color: #ffffff;">Charcoal Dark</span>
+              <span class="settings-card-desc" style="color: #8a8a8a;">Default elegant deep grey interface.</span>
+            </div>
+            <div class="settings-card-tile theme-option ${settings.theme === 'dark' && settings.themeSubtype === 'oled' ? 'active' : ''}" data-theme="dark" data-subtype="oled" style="background-color: #000000; border: 1px solid rgba(255,255,255,0.15);">
+              <span class="settings-card-name" style="color: #ffffff;">OLED Pitch Black</span>
+              <span class="settings-card-desc" style="color: #888888;">Pure black theme. Great for OLED screens.</span>
+            </div>
+          </div>
+
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--text-section); letter-spacing: 0.05em; font-weight: 600; margin-bottom: 8px;">Light Modes</div>
+          <div class="settings-grid-cards">
+            <div class="settings-card-tile theme-option ${settings.theme === 'light' && settings.themeSubtype === 'white' ? 'active' : ''}" data-theme="light" data-subtype="white" style="background-color: #ffffff; border: 1px solid rgba(0,0,0,0.1);">
+              <span class="settings-card-name" style="color: #1c1c1a;">Clean White</span>
+              <span class="settings-card-desc" style="color: #5c5c5a;">Crisp, bright, and classic interface.</span>
+            </div>
+            <div class="settings-card-tile theme-option ${settings.theme === 'light' && settings.themeSubtype === 'cream' ? 'active' : ''}" data-theme="light" data-subtype="cream" style="background-color: #faf8f5; border: 1px solid rgba(43,38,31,0.15);">
+              <span class="settings-card-name" style="color: #2b261f;">Soft Cream</span>
+              <span class="settings-card-desc" style="color: #6b6357;">Warm, sepia tone. Gentle on the eyes.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calendar Week Start Day settings -->
+        <div class="settings-option-group">
+          <div class="settings-option-title">Calendar Start Day</div>
+          <div class="settings-option-desc">Set whether the calendar week starts on Sunday or Monday.</div>
+          <div class="settings-segmented-control">
+            <button class="segmented-btn weekstart-option ${settings.weekStart === 'sunday' ? 'active' : ''}" data-start="sunday">Sunday</button>
+            <button class="segmented-btn weekstart-option ${settings.weekStart === 'monday' ? 'active' : ''}" data-start="monday">Monday</button>
+          </div>
         </div>
       </div>
 
@@ -3253,6 +3369,10 @@ function renderSettingsHtml() {
 }
 
 function bindSettingsEvents() {
+  if (!data.settings) data.settings = {};
+  if (!Array.isArray(data.settings.categories)) {
+    data.settings.categories = ['To-dos', 'Notes', 'Journal', 'Personal', 'Work'];
+  }
   const togglePomodoro = document.getElementById('toggle-pomodoro');
   const btnRestoreHome = document.getElementById('btn-restore-home');
   if (btnRestoreHome) {
@@ -3264,7 +3384,6 @@ function bindSettingsEvents() {
   }
   const toggleSticky = document.getElementById('toggle-sticky');
   const toggleBanners = document.getElementById('toggle-banners');
-  const btnThemeToggle = document.getElementById('btn-theme-toggle');
   const btnAddCat = document.getElementById('btn-add-cat');
   const inputNewCat = document.getElementById('input-new-cat');
 
@@ -3324,16 +3443,69 @@ function bindSettingsEvents() {
     });
   }
 
-  if (btnThemeToggle) {
-    btnThemeToggle.addEventListener('click', () => {
-      data.settings.theme = data.settings.theme === 'light' ? 'dark' : 'light';
+  // Workspace Personalization Bindings
+  document.querySelectorAll('.font-option').forEach(card => {
+    card.addEventListener('click', () => {
+      const font = card.dataset.font;
+      data.settings.fontFamily = font;
+      saveData();
+      applyTheme();
+      
+      // Update active class on cards
+      document.querySelectorAll('.font-option').forEach(c => c.classList.toggle('active', c.dataset.font === font));
+      showToast(`Font updated to ${font.charAt(0).toUpperCase() + font.slice(1)}`);
+    });
+  });
+
+  document.querySelectorAll('.accent-option').forEach(bubble => {
+    bubble.addEventListener('click', () => {
+      const color = bubble.dataset.color;
+      data.settings.accentColor = color;
+      saveData();
+      applyTheme();
+
+      // Update active class on bubbles
+      document.querySelectorAll('.accent-option').forEach(b => b.classList.toggle('active', b.dataset.color === color));
+      showToast(`Accent color updated to ${color.charAt(0).toUpperCase() + color.slice(1)}`);
+    });
+  });
+
+  document.querySelectorAll('.theme-option').forEach(card => {
+    card.addEventListener('click', () => {
+      const theme = card.dataset.theme;
+      const subtype = card.dataset.subtype;
+      data.settings.theme = theme;
+      data.settings.themeSubtype = subtype;
       saveData();
       applyTheme();
       renderSidebar();
-      renderPage();
-      showToast('Theme updated');
+      
+      // Update active class on cards
+      document.querySelectorAll('.theme-option').forEach(c => {
+        const isMatch = c.dataset.theme === theme && c.dataset.subtype === subtype;
+        c.classList.toggle('active', isMatch);
+      });
+      
+      showToast(`Theme variation updated`);
     });
-  }
+  });
+
+  document.querySelectorAll('.weekstart-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const start = btn.dataset.start;
+      data.settings.weekStart = start;
+      saveData();
+      
+      // Update active class on buttons
+      document.querySelectorAll('.weekstart-option').forEach(b => b.classList.toggle('active', b.dataset.start === start));
+      showToast(`Calendar week start updated to ${start.charAt(0).toUpperCase() + start.slice(1)}`);
+      
+      // If we are currently viewing tasks in calendar layout, re-render it
+      if (data.activeView === 'calendar') {
+        renderCalendar();
+      }
+    });
+  });
 
   if (btnAddCat && inputNewCat) {
     const handleAdd = () => {
@@ -3891,10 +4063,7 @@ document.getElementById('nav-add-private')?.addEventListener('click', (e) => {
 const navLibBtn = document.getElementById('nav-library');
 if (navLibBtn) {
   navLibBtn.addEventListener('click', () => {
-    data.activePageId = 'library';
-    saveData();
-    renderSidebar();
-    renderPage();
+    navigateTo('library');
   });
 }
 
@@ -3908,10 +4077,7 @@ if (navHomeBtn) {
 const navSettingsBtn = document.getElementById('nav-settings');
 if (navSettingsBtn) {
   navSettingsBtn.addEventListener('click', () => {
-    data.activePageId = 'settings';
-    saveData();
-    renderSidebar();
-    renderPage();
+    navigateTo('settings');
   });
 }
 
