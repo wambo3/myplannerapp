@@ -209,7 +209,8 @@ const DEFAULT_DATA = {
     categories: ['To-dos', 'Notes', 'Journal', 'Personal', 'Work'],
     homeTitle: 'Command Center',
     customQuote: '',
-    activeWidgets: ['clock', 'habits', 'goals', 'quote', 'timer', 'reading', 'calendar', 'quick_add']
+    activeWidgets: ['clock', 'habits', 'goals', 'quote', 'timer', 'reading', 'calendar', 'quick_add'],
+    quickActions: []
   },
   stickies: [],
   habits: [
@@ -262,6 +263,9 @@ function loadData() {
       if (parsed.settings.customQuote === undefined) parsed.settings.customQuote = '';
       if (parsed.settings.activeWidgets === undefined) {
         parsed.settings.activeWidgets = ['clock', 'habits', 'goals', 'quote', 'timer', 'reading', 'calendar', 'quick_add'];
+      }
+      if (parsed.settings.quickActions === undefined) {
+        parsed.settings.quickActions = [];
       }
       
       // Stickies Migration
