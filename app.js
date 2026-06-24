@@ -3335,7 +3335,8 @@ function makeMiniCalendarHtml() {
 
 function renderHomeHtml() {
   const greeting = getGreeting();
-  const workspaceName = data.settings.workspaceName || 'Workspace';
+  const prof = data.profile || { name: 'User Name', bio: 'Productivity Mode', avatarType: 'initials', avatarUrl: '' };
+  const userName = prof.name || 'User Name';
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
@@ -3666,7 +3667,7 @@ function renderHomeHtml() {
     <div class="home-view" style="max-width: none; margin: 16px 0 0 0;">
       <div class="home-hero">
         <div class="home-hero-text">
-          <div class="home-greeting">${greeting}, <strong>${escapeHtml(workspaceName)}</strong></div>
+          <div class="home-greeting">${greeting}, <strong>${escapeHtml(userName)}</strong></div>
           <div class="home-date">${dateStr}</div>
         </div>
       </div>
