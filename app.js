@@ -1277,6 +1277,7 @@ function renderPage() {
   if (pageType === 'notes') {
     const editor = document.getElementById('notes-rich-editor');
     if (editor) {
+      setupWikiLinkAutocomplete(editor, page);
       // Save content on input
       editor.addEventListener('input', () => {
         page.content = editor.innerHTML;
@@ -2884,7 +2885,16 @@ function bindPageEvents() {
     titleEl.addEventListener('blur', () => {
       const newName = titleEl.textContent.trim();
       if (newName && newName !== page.name) {
+        const oldName = page.name;
         page.name = newName;
+        // Update backlinks in other pages
+        data.pages.forEach(p => {
+          if (p.content) {
+            const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp('\\[\\[' + escapeRegExp(oldName) + '\\]\\]', 'gi');
+            p.content = p.content.replace(regex, `[[${newName}]]`);
+          }
+        });
         saveData();
         renderSidebar();
         document.getElementById('breadcrumb-name').textContent = newName;
@@ -5686,6 +5696,261 @@ function getBacklinks(currentPage) {
   return backlinks;
 }
 
+function getWikiLinkTrigger(editor) {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+  const range = selection.getRangeAt(0);
+  const node = range.startContainer;
+  if (node.nodeType !== Node.TEXT_NODE) return null;
+  
+  const text = node.textContent;
+  const offset = range.startOffset;
+  
+  const lastDoubleOpen = text.lastIndexOf('[[', offset - 1);
+  if (lastDoubleOpen === -1) return null;
+  
+  const textBetween = text.substring(lastDoubleOpen, offset);
+  if (textBetween.includes(']]')) return null;
+  
+  const query = textBetween.substring(2);
+  return {
+    node: node,
+    query: query,
+    startOffset: lastDoubleOpen,
+    endOffset: offset
+  };
+}
+
+function closeWikiLinkDropdown() {
+  if (window.wikiLinkDropdown) {
+    window.wikiLinkDropdown.remove();
+    window.wikiLinkDropdown = null;
+    window.wikiLinkDropdownActiveIndex = -1;
+    window.wikiLinkDropdownInfo = null;
+  }
+}
+
+function positionDropdown(dropdown, selectionRange) {
+  const rect = selectionRange.getBoundingClientRect();
+  dropdown.style.position = 'absolute';
+  dropdown.style.zIndex = '10000';
+  
+  let left = rect.left + window.scrollX;
+  let top = rect.bottom + window.scrollY;
+  
+  const dropdownWidth = 240;
+  if (left + dropdownWidth > window.innerWidth) {
+    left = window.innerWidth - dropdownWidth - 10;
+  }
+  
+  dropdown.style.left = `${left}px`;
+  dropdown.style.top = `${top}px`;
+}
+
+function showWikiLinkDropdown(editor, page, triggerInfo) {
+  closeWikiLinkDropdown();
+  
+  const matches = data.pages.filter(p => 
+    p.name.toLowerCase().includes(triggerInfo.query.toLowerCase())
+  );
+  
+  const dropdown = document.createElement('div');
+  dropdown.className = 'wiki-link-dropdown';
+  dropdown.style.cssText = `
+    position: absolute;
+    background: var(--bg-context-menu);
+    border: 1px solid var(--border-input);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    max-height: 200px;
+    overflow-y: auto;
+    width: 240px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  `;
+  
+  let options = [...matches];
+  let html = '';
+  options.forEach((opt, idx) => {
+    html += `
+      <div class="wiki-dropdown-item ${idx === 0 ? 'active' : ''}" data-index="${idx}" data-page-id="${opt.id}" data-page-name="${opt.name}" style="padding: 6px 10px; border-radius: 4px; color: white; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: background 0.15s;">
+        <span style="font-weight: 500;">${escapeHtml(opt.name)}</span>
+        <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">${escapeHtml(opt.type || 'note')}</span>
+      </div>
+    `;
+  });
+  
+  const hasExactMatch = matches.some(m => m.name.toLowerCase() === triggerInfo.query.toLowerCase().trim());
+  const queryTrimmed = triggerInfo.query.trim();
+  if (queryTrimmed && !hasExactMatch) {
+    const createIndex = options.length;
+    html += `
+      <div class="wiki-dropdown-item wiki-dropdown-create ${options.length === 0 ? 'active' : ''}" data-index="${createIndex}" data-create-name="${escapeHtml(queryTrimmed)}" style="padding: 6px 10px; border-radius: 4px; color: var(--accent-blue); font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.15s; border-top: 1px solid var(--divider);">
+        <span>✦</span>
+        <span style="font-weight: 500; font-style: italic;">Create "${escapeHtml(queryTrimmed)}"</span>
+      </div>
+    `;
+  }
+  
+  if (!html) return;
+  
+  dropdown.innerHTML = html;
+  document.body.appendChild(dropdown);
+  window.wikiLinkDropdown = dropdown;
+  window.wikiLinkDropdownActiveIndex = 0;
+  
+  const selection = window.getSelection();
+  if (selection && selection.rangeCount > 0) {
+    positionDropdown(dropdown, selection.getRangeAt(0));
+  }
+  
+  if (!document.getElementById('wiki-link-dropdown-styles')) {
+    const styles = document.createElement('style');
+    styles.id = 'wiki-link-dropdown-styles';
+    styles.innerHTML = `
+      .wiki-dropdown-item:hover, .wiki-dropdown-item.active {
+        background: rgba(255, 255, 255, 0.08) !important;
+      }
+      .wiki-dropdown-item.active {
+        outline: 1px solid rgba(255, 255, 255, 0.15);
+      }
+    `;
+    document.head.appendChild(styles);
+  }
+  
+  dropdown.querySelectorAll('.wiki-dropdown-item').forEach(item => {
+    item.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      selectDropdownItem(editor, page, item, triggerInfo);
+    };
+  });
+}
+
+function selectDropdownItem(editor, page, item, triggerInfo) {
+  let pageName = '';
+  if (item.classList.contains('wiki-dropdown-create')) {
+    const newName = item.dataset.createName;
+    const newPage = {
+      id: 'page-' + uid(),
+      name: newName,
+      category: page.category || 'Notes',
+      type: 'notes',
+      content: '',
+      banner: ''
+    };
+    data.pages.push(newPage);
+    data.recentIds.unshift(newPage.id);
+    saveData();
+    renderSidebar();
+    pageName = newName;
+    showToast(`Created page: ${newName}`);
+  } else {
+    pageName = item.dataset.pageName;
+  }
+  
+  const textNode = triggerInfo.node;
+  const beforeText = textNode.textContent.substring(0, triggerInfo.startOffset);
+  const afterText = textNode.textContent.substring(triggerInfo.endOffset);
+  
+  textNode.textContent = beforeText + `[[${pageName}]]` + afterText;
+  
+  const newCaretPos = triggerInfo.startOffset + pageName.length + 4;
+  const range = document.createRange();
+  const selection = window.getSelection();
+  
+  range.setStart(textNode, newCaretPos);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  
+  editor.dispatchEvent(new Event('input'));
+  closeWikiLinkDropdown();
+}
+
+function handleWikiLinkKeyDown(e, editor, page) {
+  if (!window.wikiLinkDropdown) return;
+  
+  const dropdown = window.wikiLinkDropdown;
+  const items = dropdown.querySelectorAll('.wiki-dropdown-item');
+  if (items.length === 0) return;
+  
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    window.wikiLinkDropdownActiveIndex = (window.wikiLinkDropdownActiveIndex + 1) % items.length;
+    updateActiveItem(items);
+  }
+  else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    window.wikiLinkDropdownActiveIndex = (window.wikiLinkDropdownActiveIndex - 1 + items.length) % items.length;
+    updateActiveItem(items);
+  }
+  else if (e.key === 'Enter' || e.key === 'Tab') {
+    e.preventDefault();
+    const activeItem = items[window.wikiLinkDropdownActiveIndex];
+    if (activeItem && window.wikiLinkDropdownInfo) {
+      selectDropdownItem(editor, page, activeItem, window.wikiLinkDropdownInfo);
+    }
+  }
+  else if (e.key === 'Escape') {
+    e.preventDefault();
+    closeWikiLinkDropdown();
+  }
+}
+
+function updateActiveItem(items) {
+  items.forEach((item, idx) => {
+    if (idx === window.wikiLinkDropdownActiveIndex) {
+      item.classList.add('active');
+      item.scrollIntoView({ block: 'nearest' });
+    } else {
+      item.classList.remove('active');
+    }
+  });
+}
+
+function setupWikiLinkAutocomplete(editor, page) {
+  editor.addEventListener('keydown', (e) => {
+    if (window.wikiLinkDropdown) {
+      handleWikiLinkKeyDown(e, editor, page);
+    }
+  });
+
+  editor.addEventListener('keyup', (e) => {
+    if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape', 'Tab'].includes(e.key)) {
+      return;
+    }
+    
+    const trigger = getWikiLinkTrigger(editor);
+    if (trigger) {
+      window.wikiLinkDropdownInfo = trigger;
+      showWikiLinkDropdown(editor, page, trigger);
+    } else {
+      closeWikiLinkDropdown();
+    }
+  });
+
+  const clickOutsideHandler = (e) => {
+    if (window.wikiLinkDropdown && !editor.contains(e.target) && !window.wikiLinkDropdown.contains(e.target)) {
+      closeWikiLinkDropdown();
+    }
+  };
+  document.addEventListener('click', clickOutsideHandler);
+  
+  const cleanupObserver = new MutationObserver(() => {
+    if (!document.getElementById('notes-rich-editor')) {
+      document.removeEventListener('click', clickOutsideHandler);
+      closeWikiLinkDropdown();
+      cleanupObserver.disconnect();
+    }
+  });
+  cleanupObserver.observe(document.body, { childList: true, subtree: true });
+}
+
 // ============================================================
 // Kanban Board Page Type View
 // ============================================================
@@ -6651,22 +6916,28 @@ function bindCrmEvents(page) {
 // Journal & Mood Tracker Page Type View
 // ============================================================
 
-function renderJournalHtml(page) {
-  page.bucketList = page.bucketList || [];
-  page.visionBoard = page.visionBoard || [];
-  page.decisions = page.decisions || [];
-  page.lifeAreas = page.lifeAreas || { career: 5, health: 5, finance: 5, relationships: 5, growth: 5 };
+function renderMoodLogsHtml() {
+  let moodLogsHtml = '';
+  const logs = data.moodLogs || [];
+  if (logs.length === 0) {
+    moodLogsHtml = `<div style="text-align:center; color:var(--text-muted); font-size:11px; padding:10px;">No mood history logged yet.</div>`;
+  } else {
+    logs.slice().reverse().forEach(log => {
+      moodLogsHtml += `
+        <div style="padding:8px 0; border-bottom:1px solid var(--divider); font-size:12px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+            <span style="font-weight:600; color:white;">${log.mood} ${escapeHtml(log.moodName || '')}</span>
+            <span style="color:var(--text-muted);">${escapeHtml(log.date)}</span>
+          </div>
+          <div style="color:var(--text-muted);">${escapeHtml(log.note || '')}</div>
+        </div>
+      `;
+    });
+  }
+  return moodLogsHtml;
+}
 
-  const prompts = [
-    "What made you smile today?",
-    "What is something you learned about yourself recently?",
-    "What was the most challenging part of your day, and how did you handle it?",
-    "Identify three things you are grateful for right now.",
-    "What is a personal boundary you set or wish you set today?",
-    "What goal are you currently working towards, and what is your next step?"
-  ];
-  const randPrompt = prompts[new Date().getDate() % prompts.length];
-
+function renderBucketListHtml(page) {
   let bucketListHtml = '';
   if (page.bucketList.length === 0) {
     bucketListHtml = `<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:10px;">Your bucket list is empty.</div>`;
@@ -6683,7 +6954,10 @@ function renderJournalHtml(page) {
       `;
     });
   }
+  return bucketListHtml;
+}
 
+function renderVisionBoardGridHtml(page) {
   let visionHtml = '';
   if (page.visionBoard.length === 0) {
     visionHtml = `<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:30px; border: 1px dashed var(--divider); border-radius:8px; grid-column: 1 / -1;">Your vision board is empty. Add base64 images or inspirational quotes!</div>`;
@@ -6700,7 +6974,10 @@ function renderJournalHtml(page) {
       `;
     });
   }
+  return visionHtml;
+}
 
+function renderDecisionsTbodyHtml(page) {
   let decisionsHtml = '';
   if (page.decisions.length === 0) {
     decisionsHtml = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No decision records yet.</td></tr>`;
@@ -6725,24 +7002,29 @@ function renderJournalHtml(page) {
       `;
     });
   }
+  return decisionsHtml;
+}
 
-  let moodLogsHtml = '';
-  const logs = data.moodLogs || [];
-  if (logs.length === 0) {
-    moodLogsHtml = `<div style="text-align:center; color:var(--text-muted); font-size:11px; padding:10px;">No mood history logged yet.</div>`;
-  } else {
-    logs.slice().reverse().forEach(log => {
-      moodLogsHtml += `
-        <div style="padding:8px 0; border-bottom:1px solid var(--divider); font-size:12px;">
-          <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
-            <span style="font-weight:600; color:white;">${log.mood} ${escapeHtml(log.moodName || '')}</span>
-            <span style="color:var(--text-muted);">${escapeHtml(log.date)}</span>
-          </div>
-          <div style="color:var(--text-muted);">${escapeHtml(log.note || '')}</div>
-        </div>
-      `;
-    });
-  }
+function renderJournalHtml(page) {
+  page.bucketList = page.bucketList || [];
+  page.visionBoard = page.visionBoard || [];
+  page.decisions = page.decisions || [];
+  page.lifeAreas = page.lifeAreas || { career: 5, health: 5, finance: 5, relationships: 5, growth: 5 };
+
+  const prompts = [
+    "What made you smile today?",
+    "What is something you learned about yourself recently?",
+    "What was the most challenging part of your day, and how did you handle it?",
+    "Identify three things you are grateful for right now.",
+    "What is a personal boundary you set or wish you set today?",
+    "What goal are you currently working towards, and what is your next step?"
+  ];
+  const randPrompt = prompts[new Date().getDate() % prompts.length];
+
+  const bucketListHtml = renderBucketListHtml(page);
+  const visionHtml = renderVisionBoardGridHtml(page);
+  const decisionsHtml = renderDecisionsTbodyHtml(page);
+  const moodLogsHtml = renderMoodLogsHtml();
 
   return `
     <div style="max-width: 960px; margin: 0 auto; padding: 0 10px;">
@@ -6778,7 +7060,7 @@ function renderJournalHtml(page) {
         <div>
           <div class="home-section" style="padding:16px; background:rgba(0,0,0,0.1); border-radius:8px; max-height:360px; overflow-y:auto;">
             <h3 style="margin-bottom:12px;">📜 Mood History</h3>
-            ${moodLogsHtml}
+            <div id="mood-history-list">${moodLogsHtml}</div>
           </div>
         </div>
       </div>
@@ -6803,7 +7085,7 @@ function renderJournalHtml(page) {
               <h3 style="margin:0;">🪣 Bucket List</h3>
               <button class="icon-btn" id="btn-add-bucket" style="color:var(--text-muted); background:none; border:none; font-size:16px; cursor:pointer;" title="Add bucket item">+</button>
             </div>
-            <div style="max-height: 250px; overflow-y:auto;">
+            <div style="max-height: 250px; overflow-y:auto;" id="bucket-list-container">
               ${bucketListHtml}
             </div>
           </div>
@@ -6843,7 +7125,7 @@ function renderJournalHtml(page) {
                 <th></th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="decisions-tbody">
               ${decisionsHtml}
             </tbody>
           </table>
@@ -6851,6 +7133,78 @@ function renderJournalHtml(page) {
       </div>
     </div>
   `;
+}
+
+function bindBucketListEvents(container, page) {
+  container.querySelectorAll('.bucket-checkbox').forEach(cb => {
+    cb.onchange = () => {
+      const id = cb.dataset.id;
+      const item = page.bucketList.find(x => x.id === id);
+      if (item) {
+        item.checked = cb.checked;
+        saveData();
+        const span = cb.nextElementSibling;
+        if (span) {
+          span.style.textDecoration = cb.checked ? 'line-through' : 'none';
+          span.style.opacity = cb.checked ? '0.6' : '1';
+        }
+      }
+    };
+  });
+
+  container.querySelectorAll('.btn-delete-bucket').forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.dataset.id;
+      page.bucketList = page.bucketList.filter(x => x.id !== id);
+      saveData();
+      const bucketContainer = document.getElementById('bucket-list-container');
+      if (bucketContainer) {
+        bucketContainer.innerHTML = renderBucketListHtml(page);
+        bindBucketListEvents(bucketContainer, page);
+      }
+    };
+  });
+}
+
+function bindVisionEvents(container, page) {
+  container.querySelectorAll('.btn-delete-vision').forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.dataset.id;
+      page.visionBoard = page.visionBoard.filter(x => x.id !== id);
+      saveData();
+      const visionContainer = document.getElementById('vision-board-grid');
+      if (visionContainer) {
+        visionContainer.innerHTML = renderVisionBoardGridHtml(page);
+        bindVisionEvents(visionContainer, page);
+      }
+    };
+  });
+}
+
+function bindDecisionEvents(container, page) {
+  container.querySelectorAll('.decision-status').forEach(sel => {
+    sel.onchange = () => {
+      const id = sel.dataset.id;
+      const d = page.decisions.find(x => x.id === id);
+      if (d) {
+        d.status = sel.value;
+        saveData();
+      }
+    };
+  });
+
+  container.querySelectorAll('.btn-delete-decision').forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.dataset.id;
+      page.decisions = page.decisions.filter(x => x.id !== id);
+      saveData();
+      const decisionsTbody = document.getElementById('decisions-tbody');
+      if (decisionsTbody) {
+        decisionsTbody.innerHTML = renderDecisionsTbodyHtml(page);
+        bindDecisionEvents(decisionsTbody, page);
+      }
+    };
+  });
 }
 
 function bindJournalEvents(page) {
@@ -6910,7 +7264,12 @@ function bindJournalEvents(page) {
         note: val
       });
       saveData();
-      renderPage();
+      
+      const moodLogsList = document.getElementById('mood-history-list');
+      if (moodLogsList) {
+        moodLogsList.innerHTML = renderMoodLogsHtml();
+      }
+      reflectionInput.value = '';
       showToast("Reflection and mood logged!");
     };
   }
@@ -6922,31 +7281,16 @@ function bindJournalEvents(page) {
         if (!res.name) return;
         page.bucketList.push({ id: uid(), name: res.name, checked: false });
         saveData();
-        renderPage();
+        const bucketContainer = document.getElementById('bucket-list-container');
+        if (bucketContainer) {
+          bucketContainer.innerHTML = renderBucketListHtml(page);
+          bindBucketListEvents(bucketContainer, page);
+        }
       });
     };
   }
 
-  container.querySelectorAll('.bucket-checkbox').forEach(cb => {
-    cb.onchange = () => {
-      const id = cb.dataset.id;
-      const item = page.bucketList.find(x => x.id === id);
-      if (item) {
-        item.checked = cb.checked;
-        saveData();
-        renderPage();
-      }
-    };
-  });
-
-  container.querySelectorAll('.btn-delete-bucket').forEach(btn => {
-    btn.onclick = () => {
-      const id = btn.dataset.id;
-      page.bucketList = page.bucketList.filter(x => x.id !== id);
-      saveData();
-      renderPage();
-    };
-  });
+  bindBucketListEvents(container, page);
 
   const addVision = document.getElementById('btn-add-vision');
   if (addVision) {
@@ -6962,19 +7306,16 @@ function bindJournalEvents(page) {
           caption: res.caption || ''
         });
         saveData();
-        renderPage();
+        const visionContainer = document.getElementById('vision-board-grid');
+        if (visionContainer) {
+          visionContainer.innerHTML = renderVisionBoardGridHtml(page);
+          bindVisionEvents(visionContainer, page);
+        }
       });
     };
   }
 
-  container.querySelectorAll('.btn-delete-vision').forEach(btn => {
-    btn.onclick = () => {
-      const id = btn.dataset.id;
-      page.visionBoard = page.visionBoard.filter(x => x.id !== id);
-      saveData();
-      renderPage();
-    };
-  });
+  bindVisionEvents(container, page);
 
   container.querySelectorAll('.life-area-slider').forEach(slider => {
     slider.oninput = () => {
@@ -7002,31 +7343,16 @@ function bindJournalEvents(page) {
           status: 'Pending'
         });
         saveData();
-        renderPage();
+        const decisionsTbody = document.getElementById('decisions-tbody');
+        if (decisionsTbody) {
+          decisionsTbody.innerHTML = renderDecisionsTbodyHtml(page);
+          bindDecisionEvents(decisionsTbody, page);
+        }
       });
     };
   }
 
-  container.querySelectorAll('.decision-status').forEach(sel => {
-    sel.onchange = () => {
-      const id = sel.dataset.id;
-      const d = page.decisions.find(x => x.id === id);
-      if (d) {
-        d.status = sel.value;
-        saveData();
-        renderPage();
-      }
-    };
-  });
-
-  container.querySelectorAll('.btn-delete-decision').forEach(btn => {
-    btn.onclick = () => {
-      const id = btn.dataset.id;
-      page.decisions = page.decisions.filter(x => x.id !== id);
-      saveData();
-      renderPage();
-    };
-  });
+  bindDecisionEvents(container, page);
 }
 
 // ============================================================
