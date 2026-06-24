@@ -228,7 +228,13 @@ const DEFAULT_DATA = {
     { id: 'crm1', name: 'Professor Adams', stage: 'Mentor', lastContact: '2026-06-18', frequency: 'monthly', notes: 'Check in about research proposal.' },
     { id: 'crm2', name: 'Alice (Recruiter)', stage: 'Professional', lastContact: '2026-06-20', frequency: 'weekly', notes: 'Send resume updates.' }
   ],
-  productivityActivity: {}
+  productivityActivity: {},
+  profile: {
+    name: 'User Name',
+    bio: 'Productivity Mode',
+    avatarType: 'initials',
+    avatarUrl: ''
+  }
 };
 
 function loadData() {
@@ -286,7 +292,12 @@ function loadData() {
       parsed.todayGoals = parsed.todayGoals || [];
       parsed.moodLogs = parsed.moodLogs || [];
       parsed.crmContacts = parsed.crmContacts || [];
-      parsed.productivityActivity = parsed.productivityActivity || {};
+      parsed.profile = parsed.profile || {
+        name: 'User Name',
+        bio: 'Productivity Mode',
+        avatarType: 'initials',
+        avatarUrl: ''
+      };
       
       return parsed;
     }
@@ -332,6 +343,43 @@ function updateFavicon() {
     document.getElementsByTagName('head')[0].appendChild(link);
   }
   link.href = canvas.toDataURL('image/x-icon');
+}
+
+function updateSidebarProfile() {
+  const profileName = document.getElementById('profile-name');
+  const profileBio = document.getElementById('profile-bio');
+  const profileAvatar = document.getElementById('profile-avatar');
+  const profileCard = document.getElementById('sidebar-profile-card');
+  
+  if (!profileName || !profileBio || !profileAvatar) return;
+
+  const prof = data.profile || { name: 'User Name', bio: 'Productivity Mode', avatarType: 'initials', avatarUrl: '' };
+  profileName.textContent = prof.name || 'User Name';
+  profileBio.textContent = prof.bio || 'Productivity Mode';
+
+  if (prof.avatarType === 'image' && prof.avatarUrl) {
+    profileAvatar.style.backgroundImage = `url(${prof.avatarUrl})`;
+    profileAvatar.textContent = '';
+  } else {
+    profileAvatar.style.backgroundImage = 'none';
+    profileAvatar.style.backgroundColor = 'var(--accent-blue)';
+    profileAvatar.textContent = (prof.name || 'User Name').charAt(0).toUpperCase();
+  }
+}
+
+function updateSettingsAvatarPreview() {
+  const preview = document.getElementById('settings-avatar-preview');
+  if (!preview) return;
+  const prof = data.profile || { name: 'User Name', bio: 'Productivity Mode', avatarType: 'initials', avatarUrl: '' };
+  
+  if (prof.avatarType === 'image' && prof.avatarUrl) {
+    preview.style.backgroundImage = `url(${prof.avatarUrl})`;
+    preview.textContent = '';
+  } else {
+    preview.style.backgroundImage = 'none';
+    preview.style.backgroundColor = 'var(--accent-blue)';
+    preview.textContent = (prof.name || 'User Name').charAt(0).toUpperCase();
+  }
 }
 
 let data = loadData();
@@ -750,6 +798,7 @@ function renderSidebar(searchQuery = '') {
   if (navSettings) {
     navSettings.classList.toggle('active', data.activePageId === 'settings');
   }
+  updateSidebarProfile();
 }
 
 async function addNewPageInCategory(categoryName) {
@@ -4135,6 +4184,7 @@ function applySidebarState() {
 function renderSettingsHtml() {
   const settings = data.settings || {};
   const categories = Array.isArray(settings.categories) ? settings.categories : ['To-dos', 'Notes', 'Journal', 'Personal', 'Work'];
+  const prof = data.profile || { name: 'User Name', bio: 'Productivity Mode', avatarType: 'initials', avatarUrl: '' };
   
   let categoriesListHtml = '';
   categories.forEach(cat => {
@@ -4146,12 +4196,50 @@ function renderSettingsHtml() {
     `;
   });
 
+  let profileSectionHtml = `
+      <div class="settings-section">
+        <h3>User Profile</h3>
+        <p class="section-desc" style="margin-bottom: 16px; font-size: 12px; color: var(--text-muted);">
+          Customize your name, status bio, and profile picture displayed in the sidebar.
+        </p>
+
+        <div style="display: flex; gap: 20px; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap;">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <div id="settings-avatar-preview" style="width: 80px; height: 80px; border-radius: 50%; background: var(--accent-blue); display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 32px; border: 2px solid var(--border-input); background-size: cover; background-position: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); ${prof.avatarType === 'image' && prof.avatarUrl ? `background-image: url(${prof.avatarUrl});` : ''}">
+              ${prof.avatarType === 'initials' ? (prof.name || 'User Name').charAt(0).toUpperCase() : ''}
+            </div>
+            <button class="btn-action" id="btn-upload-avatar" style="font-size: 11px; padding: 4px 8px; cursor: pointer;">Upload Photo</button>
+          </div>
+
+          <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 12px;">
+            <div>
+              <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Profile Name</label>
+              <input type="text" id="profile-input-name" value="${escapeHtml(prof.name)}" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: 6px; padding: 8px; color: white; outline: none; font-family: var(--font-stack);">
+            </div>
+            <div>
+              <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Status / Bio</label>
+              <input type="text" id="profile-input-bio" value="${escapeHtml(prof.bio)}" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: 6px; padding: 8px; color: white; outline: none; font-family: var(--font-stack);">
+            </div>
+            <div>
+              <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Avatar Source</label>
+              <select id="profile-input-avatar-type" style="width: 100%; background: var(--bg-active); border: 1px solid var(--border-input); border-radius: 6px; padding: 8px; color: white; outline: none; font-family: var(--font-stack);">
+                <option value="initials" ${prof.avatarType === 'initials' ? 'selected' : ''}>Name Initial</option>
+                <option value="image" ${prof.avatarType === 'image' ? 'selected' : ''}>Custom Photo</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+  `;
+
   return `${getBannerHtml("settings")}
     <div class="settings-view-container">
       <div class="settings-header">
         <h2>Settings</h2>
         <p>Configure your workspace features, theme, cover banners, and sidebar page categories.</p>
       </div>
+
+      ${profileSectionHtml}
 
       <div class="settings-section">
         <h3>Feature Toggles</h3>
@@ -4357,6 +4445,66 @@ function bindSettingsEvents() {
   if (!Array.isArray(data.settings.categories)) {
     data.settings.categories = ['To-dos', 'Notes', 'Journal', 'Personal', 'Work'];
   }
+  if (!data.profile) {
+    data.profile = { name: 'User Name', bio: 'Productivity Mode', avatarType: 'initials', avatarUrl: '' };
+  }
+
+  // Profile Customization Listeners
+  const profileNameInput = document.getElementById('profile-input-name');
+  const profileBioInput = document.getElementById('profile-input-bio');
+  const profileAvatarType = document.getElementById('profile-input-avatar-type');
+  
+  if (profileNameInput) {
+    profileNameInput.addEventListener('input', () => {
+      data.profile.name = profileNameInput.value.trim() || 'User Name';
+      saveData();
+      updateSidebarProfile();
+      updateSettingsAvatarPreview();
+    });
+  }
+
+  if (profileBioInput) {
+    profileBioInput.addEventListener('input', () => {
+      data.profile.bio = profileBioInput.value.trim() || 'Productivity Mode';
+      saveData();
+      updateSidebarProfile();
+    });
+  }
+
+  if (profileAvatarType) {
+    profileAvatarType.addEventListener('change', () => {
+      data.profile.avatarType = profileAvatarType.value;
+      saveData();
+      updateSidebarProfile();
+      updateSettingsAvatarPreview();
+    });
+  }
+
+  const uploadBtn = document.getElementById('btn-upload-avatar');
+  if (uploadBtn) {
+    uploadBtn.addEventListener('click', () => {
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.onchange = () => {
+        if (fileInput.files && fileInput.files[0]) {
+          const file = fileInput.files[0];
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            data.profile.avatarUrl = e.target.result;
+            data.profile.avatarType = 'image';
+            if (profileAvatarType) profileAvatarType.value = 'image';
+            saveData();
+            updateSidebarProfile();
+            updateSettingsAvatarPreview();
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+      fileInput.click();
+    });
+  }
+
   const togglePomodoro = document.getElementById('toggle-pomodoro');
   const btnRestoreHome = document.getElementById('btn-restore-home');
   if (btnRestoreHome) {
@@ -5109,6 +5257,13 @@ if (navHomeBtn) {
 const navSettingsBtn = document.getElementById('nav-settings');
 if (navSettingsBtn) {
   navSettingsBtn.addEventListener('click', () => {
+    navigateTo('settings');
+  });
+}
+
+const sidebarProfileCard = document.getElementById('sidebar-profile-card');
+if (sidebarProfileCard) {
+  sidebarProfileCard.addEventListener('click', () => {
     navigateTo('settings');
   });
 }
