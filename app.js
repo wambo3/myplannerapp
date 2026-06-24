@@ -6294,9 +6294,11 @@ function bindKanbanEvents(page) {
 // Flashcards & Spaced Repetition (Anki-style SM-2)
 // ============================================================
 
-function scanNotesForFlashcards() {
+function scanNotesForFlashcards(page) {
   const cards = [];
   if (!data.pages) return cards;
+  
+  // 1. Scan notes
   data.pages.forEach(p => {
     if (p.type !== 'notes' || !p.content) return;
     
@@ -6329,6 +6331,23 @@ function scanNotesForFlashcards() {
       }
     }
   });
+
+  // 2. Append manual cards from current page
+  if (page && page.type === 'flashcards' && Array.isArray(page.cards)) {
+    page.cards.forEach(c => {
+      cards.push({
+        id: c.id,
+        sourcePageId: page.id,
+        sourcePageName: 'Manual',
+        question: c.question,
+        answer: c.answer,
+        interval: c.interval || 1,
+        ease: c.ease || 2.5,
+        repetitions: c.repetitions || 0,
+        dueDate: c.dueDate || new Date().toISOString().split('T')[0]
+      });
+    });
+  }
 
   // Sync with persistent SM-2 states in localStorage
   data.flashcardStates = data.flashcardStates || {};
@@ -6388,11 +6407,23 @@ function updateFlashcardSM2(cardId, response) {
   state.dueDate = nextDate.toISOString().split('T')[0];
   
   data.flashcardStates[cardId] = state;
+  
+  const activePage = getActivePage();
+  if (activePage && activePage.type === 'flashcards' && Array.isArray(activePage.cards)) {
+    const card = activePage.cards.find(c => c.id === cardId);
+    if (card) {
+      card.interval = state.interval;
+      card.ease = state.ease;
+      card.repetitions = state.repetitions;
+      card.dueDate = state.dueDate;
+    }
+  }
+  
   saveData();
 }
 
 function renderFlashcardsHtml(page) {
-  const cards = scanNotesForFlashcards();
+  const cards = scanNotesForFlashcards(page);
   const todayStr = new Date().toISOString().split('T')[0];
   const dueCards = cards.filter(c => c.dueDate <= todayStr);
   const pendingCount = dueCards.length;
@@ -6472,18 +6503,20 @@ function renderFlashcardsHtml(page) {
     listHtml = `<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:20px;">No flashcards parsed from notes yet.</div>`;
   }
 
+  const activeTab = data.activeFlashcardTab || 'study';
+
   return `
     <div style="max-width: 720px; margin: 0 auto;">
       <div class="view-tabs" style="margin-bottom: 20px;">
-        <button class="view-tab active" id="tab-fc-study">Study Decks</button>
-        <button class="view-tab" id="tab-fc-list">Card Database</button>
+        <button class="view-tab ${activeTab === 'study' ? 'active' : ''}" id="tab-fc-study">Study Decks</button>
+        <button class="view-tab ${activeTab === 'list' ? 'active' : ''}" id="tab-fc-list">Card Database</button>
       </div>
 
-      <div id="fc-study-view">
+      <div id="fc-study-view" style="${activeTab === 'study' ? '' : 'display:none;'}">
         ${activeCardHtml}
       </div>
 
-      <div id="fc-list-view" style="display:none;">
+      <div id="fc-list-view" style="${activeTab === 'list' ? '' : 'display:none;'}">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
           <h3 style="margin:0;">All Flashcards (${cards.length})</h3>
           <button class="btn-action" id="btn-add-flashcard">+ Add Card</button>
@@ -6509,12 +6542,16 @@ function bindFlashcardEvents(page) {
       tabList.classList.remove('active');
       studyView.style.display = 'block';
       listView.style.display = 'none';
+      data.activeFlashcardTab = 'study';
+      saveData();
     };
     tabList.onclick = () => {
       tabList.classList.add('active');
       tabStudy.classList.remove('active');
       studyView.style.display = 'none';
       listView.style.display = 'block';
+      data.activeFlashcardTab = 'list';
+      saveData();
     };
   }
 
@@ -6534,6 +6571,55 @@ function bindFlashcardEvents(page) {
       updateFlashcardSM2(cardId, response);
       renderPage();
       showToast("Response recorded!");
+    };
+  });
+
+  const addBtn = document.getElementById('btn-add-flashcard');
+  if (addBtn) {
+    addBtn.onclick = () => {
+      showCustomPrompt('Add Flashcard', [
+        { id: 'question', label: 'Question' },
+        { id: 'answer', label: 'Answer' }
+      ], (res) => {
+        if (!res.question || !res.answer) return;
+        page.cards = page.cards || [];
+        const newCard = {
+          id: 'fc-manual-' + uid(),
+          question: res.question,
+          answer: res.answer,
+          interval: 1,
+          ease: 2.5,
+          repetitions: 0,
+          dueDate: new Date().toISOString().split('T')[0]
+        };
+        page.cards.push(newCard);
+        
+        data.flashcardStates = data.flashcardStates || {};
+        data.flashcardStates[newCard.id] = {
+          interval: newCard.interval,
+          ease: newCard.ease,
+          repetitions: newCard.repetitions,
+          dueDate: newCard.dueDate
+        };
+        
+        saveData();
+        renderPage();
+        showToast("Flashcard added!");
+      });
+    };
+  }
+
+  container.querySelectorAll('.btn-delete-flashcard').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.cardId;
+      page.cards = (page.cards || []).filter(x => x.id !== id);
+      if (data.flashcardStates && data.flashcardStates[id]) {
+        delete data.flashcardStates[id];
+      }
+      saveData();
+      renderPage();
+      showToast("Flashcard deleted");
     };
   });
 }
