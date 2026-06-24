@@ -5859,6 +5859,16 @@ function closeWikiLinkDropdown() {
   }
 }
 
+// Close wiki link dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  if (window.wikiLinkDropdown) {
+    const editor = document.getElementById('notes-rich-editor');
+    if (!editor || (!editor.contains(e.target) && !window.wikiLinkDropdown.contains(e.target))) {
+      closeWikiLinkDropdown();
+    }
+  }
+});
+
 function positionDropdown(dropdown, selectionRange) {
   const rect = selectionRange.getBoundingClientRect();
   dropdown.style.position = 'absolute';
@@ -6063,21 +6073,6 @@ function setupWikiLinkAutocomplete(editor, page) {
     }
   });
 
-  const clickOutsideHandler = (e) => {
-    if (window.wikiLinkDropdown && !editor.contains(e.target) && !window.wikiLinkDropdown.contains(e.target)) {
-      closeWikiLinkDropdown();
-    }
-  };
-  document.addEventListener('click', clickOutsideHandler);
-  
-  const cleanupObserver = new MutationObserver(() => {
-    if (!document.getElementById('notes-rich-editor')) {
-      document.removeEventListener('click', clickOutsideHandler);
-      closeWikiLinkDropdown();
-      cleanupObserver.disconnect();
-    }
-  });
-  cleanupObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 // ============================================================
