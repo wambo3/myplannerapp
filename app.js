@@ -345,27 +345,7 @@ function updateFavicon() {
   link.href = canvas.toDataURL('image/x-icon');
 }
 
-function updateSidebarProfile() {
-  const profileName = document.getElementById('profile-name');
-  const profileBio = document.getElementById('profile-bio');
-  const profileAvatar = document.getElementById('profile-avatar');
-  const profileCard = document.getElementById('sidebar-profile-card');
-  
-  if (!profileName || !profileBio || !profileAvatar) return;
 
-  const prof = data.profile || { name: 'User Name', bio: 'Productivity Mode', avatarType: 'initials', avatarUrl: '' };
-  profileName.textContent = prof.name || 'User Name';
-  profileBio.textContent = prof.bio || 'Productivity Mode';
-
-  if (prof.avatarType === 'image' && prof.avatarUrl) {
-    profileAvatar.style.backgroundImage = `url(${prof.avatarUrl})`;
-    profileAvatar.textContent = '';
-  } else {
-    profileAvatar.style.backgroundImage = 'none';
-    profileAvatar.style.backgroundColor = 'var(--accent-blue)';
-    profileAvatar.textContent = (prof.name || 'User Name').charAt(0).toUpperCase();
-  }
-}
 
 function updateSettingsAvatarPreview() {
   const preview = document.getElementById('settings-avatar-preview');
@@ -798,7 +778,6 @@ function renderSidebar(searchQuery = '') {
   if (navSettings) {
     navSettings.classList.toggle('active', data.activePageId === 'settings');
   }
-  updateSidebarProfile();
 }
 
 async function addNewPageInCategory(categoryName) {
@@ -4200,7 +4179,7 @@ function renderSettingsHtml() {
       <div class="settings-section">
         <h3>User Profile</h3>
         <p class="section-desc" style="margin-bottom: 16px; font-size: 12px; color: var(--text-muted);">
-          Customize your name, status bio, and profile picture displayed in the sidebar.
+          Customize your profile name, status bio, and profile picture.
         </p>
 
         <div style="display: flex; gap: 20px; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap;">
@@ -4214,15 +4193,15 @@ function renderSettingsHtml() {
           <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 12px;">
             <div>
               <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Profile Name</label>
-              <input type="text" id="profile-input-name" value="${escapeHtml(prof.name)}" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: 6px; padding: 8px; color: white; outline: none; font-family: var(--font-stack);">
+              <input type="text" id="profile-input-name" value="${escapeHtml(prof.name)}" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: 6px; padding: 8px; color: var(--text-primary); outline: none; font-family: var(--font-stack);">
             </div>
             <div>
               <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Status / Bio</label>
-              <input type="text" id="profile-input-bio" value="${escapeHtml(prof.bio)}" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: 6px; padding: 8px; color: white; outline: none; font-family: var(--font-stack);">
+              <input type="text" id="profile-input-bio" value="${escapeHtml(prof.bio)}" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: 6px; padding: 8px; color: var(--text-primary); outline: none; font-family: var(--font-stack);">
             </div>
             <div>
               <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Avatar Source</label>
-              <select id="profile-input-avatar-type" style="width: 100%; background: var(--bg-active); border: 1px solid var(--border-input); border-radius: 6px; padding: 8px; color: white; outline: none; font-family: var(--font-stack);">
+              <select id="profile-input-avatar-type" style="width: 100%; background: var(--bg-active); border: 1px solid var(--border-input); border-radius: 6px; padding: 8px; color: var(--text-primary); outline: none; font-family: var(--font-stack);">
                 <option value="initials" ${prof.avatarType === 'initials' ? 'selected' : ''}>Name Initial</option>
                 <option value="image" ${prof.avatarType === 'image' ? 'selected' : ''}>Custom Photo</option>
               </select>
@@ -4458,7 +4437,6 @@ function bindSettingsEvents() {
     profileNameInput.addEventListener('input', () => {
       data.profile.name = profileNameInput.value.trim() || 'User Name';
       saveData();
-      updateSidebarProfile();
       updateSettingsAvatarPreview();
     });
   }
@@ -4467,7 +4445,6 @@ function bindSettingsEvents() {
     profileBioInput.addEventListener('input', () => {
       data.profile.bio = profileBioInput.value.trim() || 'Productivity Mode';
       saveData();
-      updateSidebarProfile();
     });
   }
 
@@ -4475,7 +4452,6 @@ function bindSettingsEvents() {
     profileAvatarType.addEventListener('change', () => {
       data.profile.avatarType = profileAvatarType.value;
       saveData();
-      updateSidebarProfile();
       updateSettingsAvatarPreview();
     });
   }
@@ -4495,7 +4471,6 @@ function bindSettingsEvents() {
             data.profile.avatarType = 'image';
             if (profileAvatarType) profileAvatarType.value = 'image';
             saveData();
-            updateSidebarProfile();
             updateSettingsAvatarPreview();
           };
           reader.readAsDataURL(file);
@@ -5261,12 +5236,7 @@ if (navSettingsBtn) {
   });
 }
 
-const sidebarProfileCard = document.getElementById('sidebar-profile-card');
-if (sidebarProfileCard) {
-  sidebarProfileCard.addEventListener('click', () => {
-    navigateTo('settings');
-  });
-}
+
 
 
 function initSidebarSearch() {
