@@ -6456,9 +6456,20 @@ function renderStudentHtml(page) {
     examsHtml = `<div style="text-align:center; color:var(--text-muted); padding:10px; font-size:12px;">No exams added.</div>`;
   } else {
     page.exams.forEach(ex => {
-      const examDate = new Date(ex.date);
-      const diffMs = examDate - new Date();
-      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      let diffDays = -1;
+      if (ex.date) {
+        const parts = ex.date.split('-');
+        if (parts.length === 3) {
+          const year = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10);
+          const day = parseInt(parts[2], 10);
+          const examDate = new Date(year, month - 1, day);
+          const today = new Date();
+          today.setHours(0,0,0,0);
+          const diffMs = examDate - today;
+          diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        }
+      }
       const countdownStr = diffDays > 0 ? `🚨 ${diffDays} days left` : diffDays === 0 ? '📅 TODAY!' : '✅ Completed';
       
       examsHtml += `
@@ -6718,12 +6729,18 @@ function bindStudentEvents(page) {
         return;
       }
 
-      const examDate = new Date(examDateStr);
-      const today = new Date();
-      today.setHours(0,0,0,0);
-      
-      const diffMs = examDate - today;
-      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      let diffDays = 0;
+      const parts = examDateStr.split('-');
+      if (parts.length === 3) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+        const day = parseInt(parts[2], 10);
+        const examDate = new Date(year, month - 1, day);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const diffMs = examDate - today;
+        diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+      }
       
       if (diffDays <= 0) {
         showToast("Exam date must be in the future!");
@@ -6786,7 +6803,20 @@ function renderCrmHtml(page) {
     today.setHours(0,0,0,0);
 
     contacts.forEach(c => {
-      const lastContactDate = new Date(c.lastContact || today);
+      let lastContactDate;
+      if (c.lastContact) {
+        const parts = c.lastContact.split('-');
+        if (parts.length === 3) {
+          const year = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10);
+          const day = parseInt(parts[2], 10);
+          lastContactDate = new Date(year, month - 1, day);
+        } else {
+          lastContactDate = new Date(today);
+        }
+      } else {
+        lastContactDate = new Date(today);
+      }
       let frequencyDays = 30;
       if (c.frequency === 'weekly') frequencyDays = 7;
       else if (c.frequency === 'monthly') frequencyDays = 30;
@@ -6796,7 +6826,7 @@ function renderCrmHtml(page) {
       nextContactDate.setDate(lastContactDate.getDate() + frequencyDays);
       
       const diffMs = nextContactDate - today;
-      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
       
       let countdownHtml = '';
       if (diffDays > 0) {
