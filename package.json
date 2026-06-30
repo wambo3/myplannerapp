@@ -1,4 +1,10 @@
 {
+  "name": "myplannerapp",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
   "dependencies": {
     "@embedpdf/pdfium": "^2.14.4",
     "@embedpdf/snippet": "^2.14.4",

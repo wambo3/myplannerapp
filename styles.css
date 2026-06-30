@@ -3960,5 +3960,26 @@ body.light-theme .btn-action:hover:not(:disabled) {
   color: var(--text-primary);
 }
 
+/* ===== Full Page Library Override ===== */
+body.library-fullpage #sidebar {
+  display: none !important;
+}
+body.library-fullpage #top-bar {
+  display: none !important;
+}
+body.library-fullpage .main-split-container {
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+body.library-fullpage .split-left-panel {
+  overflow: hidden !important;
+}
+body.library-fullpage .page-content {
+  padding: 0 !important;
+  max-width: 100% !important;
+  height: 100vh !important;
+}
+
 
 

@@ -1043,6 +1043,8 @@ function renderPage() {
   const container = document.getElementById('page-content');
   if (!container) return;
 
+  document.body.classList.toggle('library-fullpage', data.activePageId === 'library');
+
   if (window.innerWidth <= 768 && !data.settings.sidebarCollapsed) {
     data.settings.sidebarCollapsed = true;
     saveData();
@@ -1985,7 +1987,7 @@ function renderLibraryHtml() {
   const iframeSrc = './zotero/dist/index.html';
   
   return `
-    <div id="zotero-app-root" style="width: 100%; height: calc(100vh - 64px); display: flex; flex-direction: column; overflow: hidden; background: #f3f4f6; border-radius: 8px;">
+    <div id="zotero-app-root" style="width: 100%; height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #f3f4f6;">
       <iframe src="${iframeSrc}" style="width: 100%; height: 100%; border: none; background: transparent;"></iframe>
     </div>
   `;

@@ -69,6 +69,17 @@ export const SidebarPane: React.FC<SidebarPaneProps> = ({
           <BookOpen className="w-5 h-5 text-blue-600" />
           <span>Zotero 9 Clone</span>
         </div>
+        <button 
+          onClick={() => {
+            if (window.parent && typeof (window.parent as any).navigateTo === 'function') {
+              (window.parent as any).navigateTo('home');
+            }
+          }}
+          className="text-xs bg-slate-100 border border-slate-300 hover:bg-slate-200 px-2 py-1 rounded text-slate-600 font-semibold"
+          title="Back to Planner Dashboard"
+        >
+          Dashboard
+        </button>
       </div>
 
       {/* Library Tree */}
