@@ -26,7 +26,8 @@ export const LibraryView: React.FC = () => {
     permanentlyDeletePaper,
     addPaperNote,
     deletePaperNote,
-    trash
+    trash,
+    setActivePageId
   } = useApp();
 
   const [collections, setCollections] = useState<string[]>(() => {
@@ -177,6 +178,7 @@ export const LibraryView: React.FC = () => {
         papersCount={papersCount}
         totalCount={totalCount}
         trashCount={trashCount}
+        onBackToDashboard={() => setActivePageId('home')}
       />
 
       <ItemListPane 

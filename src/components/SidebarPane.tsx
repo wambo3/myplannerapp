@@ -25,6 +25,7 @@ interface SidebarPaneProps {
   papersCount: { [key: string]: number };
   totalCount: number;
   trashCount: number;
+  onBackToDashboard?: () => void;
 }
 
 export const SidebarPane: React.FC<SidebarPaneProps> = ({
@@ -42,6 +43,7 @@ export const SidebarPane: React.FC<SidebarPaneProps> = ({
   papersCount,
   totalCount,
   trashCount,
+  onBackToDashboard,
 }) => {
   const [isTreeExpanded, setIsTreeExpanded] = useState(true);
   const [newCollName, setNewCollName] = useState('');
@@ -69,6 +71,15 @@ export const SidebarPane: React.FC<SidebarPaneProps> = ({
           <BookOpen className="w-5 h-5 text-blue-600" />
           <span>Zotero 9 Clone</span>
         </div>
+        {onBackToDashboard && (
+          <button 
+            onClick={onBackToDashboard}
+            className="text-xs bg-slate-100 border border-slate-350 hover:bg-slate-200 px-2 py-1 rounded text-slate-600 font-semibold transition-colors"
+            title="Back to Planner Dashboard"
+          >
+            Dashboard
+          </button>
+        )}
       </div>
 
       {/* Library Tree */}

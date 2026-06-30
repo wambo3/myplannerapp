@@ -46,6 +46,18 @@ const DashboardContent: React.FC = () => {
     setIsSplitActive(!isSplitActive);
   };
 
+  const isLibraryPage = state.activePageId === 'library';
+
+  if (isLibraryPage) {
+    return (
+      <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg-app)] text-[var(--text-primary)] font-sans antialiased select-none">
+        <div className="flex-1 h-full min-w-0 overflow-hidden flex flex-col">
+          <LibraryView />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg-app)] text-[var(--text-primary)] font-sans antialiased select-none">
       {/* 1. Sidebar Panel */}
