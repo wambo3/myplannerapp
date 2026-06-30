@@ -46,6 +46,41 @@ export const LibraryView: React.FC = () => {
   const [sortBy, setSortBy] = useState<'title' | 'creator' | 'date' | 'dateAdded'>('dateAdded');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
+  // Panel Resizing States
+  const [sidebarWidth, setSidebarWidth] = useState(240);
+  const [detailWidth, setDetailWidth] = useState(320);
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+  const [isResizingDetail, setIsResizingDetail] = useState(false);
+  const [activeDetailTab, setActiveDetailTab] = useState<'info' | 'abstract' | 'tags' | 'related' | 'pdf'>('info');
+
+  // Drag-to-resize columns handler
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingSidebar) {
+        const newWidth = Math.max(180, Math.min(400, e.clientX));
+        setSidebarWidth(newWidth);
+      } else if (isResizingDetail) {
+        const newWidth = Math.max(260, Math.min(700, window.innerWidth - e.clientX));
+        setDetailWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingSidebar(false);
+      setIsResizingDetail(false);
+    };
+
+    if (isResizingSidebar || isResizingDetail) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizingSidebar, isResizingDetail]);
+
   // Save collections list when changed
   useEffect(() => {
     localStorage.setItem(COLLECTIONS_STORAGE_KEY, JSON.stringify(collections));
@@ -84,6 +119,14 @@ export const LibraryView: React.FC = () => {
   const handleSelectPaper = (id: string | null, child?: { type: 'pdf' | 'note'; id: string } | null) => {
     setSelectedPaperId(id);
     setSelectedChildId(child || null);
+    // Switch to info tab on new paper selection unless PDF tab is selected
+    if (activeDetailTab === 'pdf' && !child) {
+      // Keep PDF tab if there is a PDF
+    } else if (child?.type === 'pdf') {
+      setActiveDetailTab('pdf');
+    } else {
+      setActiveDetailTab('info');
+    }
   };
 
   const handleSort = (column: typeof sortBy) => {
@@ -149,65 +192,98 @@ export const LibraryView: React.FC = () => {
 
   const selectedPaper = state.library.find(p => p.id === selectedPaperId) || null;
 
-  if (openedPdfPaper) {
-    // Sync paper status inside PDF Reader
-    const activePaper = state.library.find(p => p.id === openedPdfPaper.id) || openedPdfPaper;
-    return (
-      <PdfReaderView 
-        paper={activePaper} 
-        onClose={() => setOpenedPdfPaper(null)}
-        onUpdatePaper={updatePaper}
-      />
-    );
-  }
+  // Sync details width when PDF reader tab is selected (expanded view)
+  const currentDetailWidth = activeDetailTab === 'pdf' ? Math.max(620, detailWidth) : detailWidth;
 
   return (
-    <div className="flex flex-1 overflow-hidden h-full bg-slate-100">
-      <SidebarPane 
-        collections={collections}
-        selectedCollection={selectedCollection}
-        selectedSpecial={selectedSpecial}
-        onSelectCollection={setSelectedCollection}
-        onSelectSpecial={setSelectedSpecial}
-        onAddCollection={handleAddCollection}
-        onDeleteCollection={handleDeleteCollection}
-        allTags={allTags}
-        selectedTags={selectedTags}
-        onToggleTag={handleToggleTag}
-        onClearTags={handleClearTags}
-        papersCount={papersCount}
-        totalCount={totalCount}
-        trashCount={trashCount}
-        onBackToDashboard={() => setActivePageId('home')}
+    <div className="flex flex-1 overflow-hidden h-full bg-[var(--bg-app)] text-[var(--text-primary)] relative select-none">
+      {/* 1. Left collections tree sidebar */}
+      <div 
+        style={{ width: `${sidebarWidth}px`, minWidth: `${sidebarWidth}px` }} 
+        className="h-full flex flex-col overflow-hidden shrink-0"
+      >
+        <SidebarPane 
+          collections={collections}
+          selectedCollection={selectedCollection}
+          selectedSpecial={selectedSpecial}
+          onSelectCollection={setSelectedCollection}
+          onSelectSpecial={setSelectedSpecial}
+          onAddCollection={handleAddCollection}
+          onDeleteCollection={handleDeleteCollection}
+          allTags={allTags}
+          selectedTags={selectedTags}
+          onToggleTag={handleToggleTag}
+          onClearTags={handleClearTags}
+          papersCount={papersCount}
+          totalCount={totalCount}
+          trashCount={trashCount}
+          onBackToDashboard={() => setActivePageId('home')}
+        />
+      </div>
+
+      {/* Left Resizer Border */}
+      <div 
+        onMouseDown={() => setIsResizingSidebar(true)}
+        className={`w-[3px] hover:w-[5px] cursor-col-resize hover:bg-blue-500/50 bg-[var(--border-color)] transition-all h-full z-20 shrink-0 ${
+          isResizingSidebar ? 'bg-blue-500 w-[5px]' : ''
+        }`}
       />
 
-      <ItemListPane 
-        papers={listPapers}
-        selectedPaperId={selectedPaperId}
-        selectedChildId={selectedChildId}
-        onSelectPaper={handleSelectPaper}
-        onAddPaperManual={(type) => addPaperManual(type, selectedCollection)}
-        onAddByIdentifier={(id) => addPaperByIdentifier(id, selectedCollection)}
-        onMoveToTrash={moveToTrash}
-        onRestoreFromTrash={restoreFromTrash}
-        onPermanentlyDelete={permanentlyDeletePaper}
-        selectedSpecial={selectedSpecial}
-        selectedCollection={selectedCollection}
-        onOpenPdf={(paper) => setOpenedPdfPaper(paper)}
-        sortBy={sortBy}
-        sortOrder={sortOrder}
-        onSort={handleSort}
+      {/* 2. Middle Main Grid Column (or middle PDF reader view) */}
+      <div className="flex-1 h-full min-w-0 overflow-hidden flex flex-col bg-[var(--bg-main)]">
+        {openedPdfPaper ? (
+          <PdfReaderView 
+            paper={state.library.find(p => p.id === openedPdfPaper.id) || openedPdfPaper} 
+            onClose={() => setOpenedPdfPaper(null)}
+            onUpdatePaper={updatePaper}
+          />
+        ) : (
+          <ItemListPane 
+            papers={listPapers}
+            selectedPaperId={selectedPaperId}
+            selectedChildId={selectedChildId}
+            onSelectPaper={handleSelectPaper}
+            onAddPaperManual={(type) => addPaperManual(type, selectedCollection)}
+            onAddByIdentifier={(id) => addPaperByIdentifier(id, selectedCollection)}
+            onMoveToTrash={moveToTrash}
+            onRestoreFromTrash={restoreFromTrash}
+            onPermanentlyDelete={permanentlyDeletePaper}
+            selectedSpecial={selectedSpecial}
+            selectedCollection={selectedCollection}
+            onOpenPdf={(paper) => setOpenedPdfPaper(paper)}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={handleSort}
+          />
+        )}
+      </div>
+
+      {/* Right Resizer Border */}
+      <div 
+        onMouseDown={() => setIsResizingDetail(true)}
+        className={`w-[3px] hover:w-[5px] cursor-col-resize hover:bg-blue-500/50 bg-[var(--border-color)] transition-all h-full z-20 shrink-0 ${
+          isResizingDetail ? 'bg-blue-500 w-[5px]' : ''
+        }`}
       />
 
-      <DetailPane 
-        paper={selectedPaper}
-        selectedChildId={selectedChildId}
-        allPapers={state.library.filter(p => !trash.includes(p.id))}
-        onUpdatePaper={updatePaper}
-        onSelectPaperId={(id) => handleSelectPaper(id, null)}
-        onAddNote={addPaperNote}
-        onDeleteNote={deletePaperNote}
-      />
+      {/* 3. Right Details & Metadata Pane */}
+      <div 
+        style={{ width: `${currentDetailWidth}px`, minWidth: `${currentDetailWidth}px` }} 
+        className="h-full flex flex-col overflow-hidden shrink-0"
+      >
+        <DetailPane 
+          paper={selectedPaper}
+          selectedChildId={selectedChildId}
+          allPapers={state.library.filter(p => !trash.includes(p.id))}
+          onUpdatePaper={updatePaper}
+          onSelectPaperId={(id) => handleSelectPaper(id, null)}
+          onAddNote={addPaperNote}
+          onDeleteNote={deletePaperNote}
+          activeTab={activeDetailTab}
+          onChangeTab={setActiveDetailTab}
+        />
+      </div>
     </div>
   );
 };
+

@@ -35,6 +35,7 @@ interface AppContextProps {
   permanentlyDeletePaper: (id: string) => void;
   addPaperNote: (paperId: string) => void;
   deletePaperNote: (paperId: string, noteId: string) => void;
+  resetLibrary: () => Promise<void>;
   trash: string[];
 }
 
@@ -307,7 +308,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Load static data.json if library is empty
   useEffect(() => {
     if (state.library.length === 0) {
-      fetch('/data.json')
+      fetch('./data.json')
         .then(res => res.ok ? res.json() : null)
         .then(dataJson => {
           if (dataJson && Array.isArray(dataJson.papers)) {
@@ -619,6 +620,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const resetLibrary = async () => {
+    try {
+      const res = await fetch('./data.json');
+      if (res.ok) {
+        const dataJson = await res.json();
+        if (dataJson && Array.isArray(dataJson.papers)) {
+          const mappedPapers = dataJson.papers.map((p: any) => ({
+            ...p,
+            name: p.title,
+            dateAdded: p.dateAdded || new Date().toISOString(),
+            dateModified: p.dateModified || new Date().toISOString()
+          }));
+          setTrash([]);
+          updateState({ library: mappedPapers });
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to reset library", e);
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       state,
@@ -654,6 +676,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       permanentlyDeletePaper,
       addPaperNote,
       deletePaperNote,
+      resetLibrary,
       trash
     }}>
       {children}

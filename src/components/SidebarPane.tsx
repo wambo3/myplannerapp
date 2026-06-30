@@ -64,17 +64,17 @@ export const SidebarPane: React.FC<SidebarPaneProps> = ({
   );
 
   return (
-    <div className="w-64 border-r border-slate-200 bg-slate-50 flex flex-col h-full select-none text-slate-800 text-sm">
+    <div className="w-full h-full border-r border-[var(--border-color)] bg-[var(--bg-sidebar)] flex flex-col select-none text-[var(--text-primary)] text-sm">
       {/* Search/Header area */}
-      <div className="p-3 border-b border-slate-200 bg-white flex items-center justify-between">
-        <div className="flex items-center gap-2 font-semibold text-slate-900">
-          <BookOpen className="w-5 h-5 text-blue-600" />
+      <div className="p-3 border-b border-[var(--border-color)] bg-[var(--bg-card)] flex items-center justify-between">
+        <div className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
+          <BookOpen className="w-5 h-5 text-blue-500" />
           <span>Zotero 9 Clone</span>
         </div>
         {onBackToDashboard && (
           <button 
             onClick={onBackToDashboard}
-            className="text-xs bg-slate-100 border border-slate-350 hover:bg-slate-200 px-2 py-1 rounded text-slate-600 font-semibold transition-colors"
+            className="text-xs bg-[var(--bg-hover)] border border-[var(--border-color)] hover:bg-[var(--bg-app)] px-2 py-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] font-semibold transition-colors"
             title="Back to Planner Dashboard"
           >
             Dashboard
@@ -85,11 +85,11 @@ export const SidebarPane: React.FC<SidebarPaneProps> = ({
       {/* Library Tree */}
       <div className="flex-1 overflow-y-auto p-2 space-y-4">
         <div>
-          <div className="flex items-center justify-between px-2 py-1 text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <div className="flex items-center justify-between px-2 py-1 text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
             <span>My Library</span>
             <button 
               onClick={() => setIsAddingColl(!isAddingColl)}
-              className="text-slate-400 hover:text-slate-600 p-0.5 rounded hover:bg-slate-200"
+              className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-0.5 rounded hover:bg-[var(--bg-hover)]"
               title="New Collection"
             >
               <FolderPlus className="w-4 h-4" />
@@ -103,12 +103,12 @@ export const SidebarPane: React.FC<SidebarPaneProps> = ({
                 value={newCollName}
                 onChange={e => setNewCollName(e.target.value)}
                 placeholder="Collection name"
-                className="flex-1 px-2 py-1 border border-slate-350 rounded text-xs focus:outline-none focus:border-blue-500"
+                className="flex-1 px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-hover)] rounded text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-color)]"
                 autoFocus
               />
               <button 
                 type="submit" 
-                className="px-2 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700"
+                className="px-2 py-1 bg-[var(--accent-color)] text-white rounded text-xs font-medium hover:opacity-90"
               >
                 Add
               </button>
@@ -124,15 +124,15 @@ export const SidebarPane: React.FC<SidebarPaneProps> = ({
               }}
               className={`flex items-center justify-between px-2 py-1.5 rounded cursor-pointer transition-colors ${
                 selectedSpecial === 'all' && !selectedCollection
-                  ? 'bg-blue-100 text-blue-900 font-medium'
-                  : 'hover:bg-slate-200 text-slate-700'
+                  ? 'bg-[var(--accent-light)] text-[var(--accent-color)] font-medium border-l-2 border-[var(--accent-color)] pl-1.5'
+                  : 'hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
             >
               <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-slate-500" />
+                <Layers className="w-4 h-4" />
                 <span>All Items</span>
               </div>
-              <span className="text-xs text-slate-400 bg-slate-200 px-1.5 py-0.2 rounded-full font-normal">
+              <span className="text-xs text-[var(--text-muted)] bg-[var(--bg-hover)] px-1.5 py-0.2 rounded-full font-normal">
                 {totalCount}
               </span>
             </div>
@@ -141,14 +141,14 @@ export const SidebarPane: React.FC<SidebarPaneProps> = ({
             <div>
               <div 
                 onClick={() => setIsTreeExpanded(!isTreeExpanded)}
-                className="flex items-center gap-1 px-2 py-1 hover:bg-slate-200 rounded cursor-pointer text-slate-600 text-xs font-semibold"
+                className="flex items-center gap-1 px-2 py-1 hover:bg-[var(--bg-hover)] rounded cursor-pointer text-[var(--text-muted)] text-xs font-semibold"
               >
                 {isTreeExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 <span>Collections</span>
               </div>
 
               {isTreeExpanded && (
-                <div className="pl-4 mt-0.5 space-y-0.5 border-l border-slate-200 ml-3">
+                <div className="pl-4 mt-0.5 space-y-0.5 border-l border-[var(--border-color)] ml-3">
                   {collections.map(coll => {
                     const isSelected = selectedCollection === coll;
                     return (
@@ -160,16 +160,16 @@ export const SidebarPane: React.FC<SidebarPaneProps> = ({
                         }}
                         className={`group flex items-center justify-between px-2 py-1.5 rounded cursor-pointer transition-colors ${
                           isSelected
-                            ? 'bg-blue-100 text-blue-900 font-medium'
-                            : 'hover:bg-slate-200 text-slate-700'
+                            ? 'bg-[var(--accent-light)] text-[var(--accent-color)] font-medium border-l-2 border-[var(--accent-color)] pl-1.5'
+                            : 'hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                         }`}
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <Folder className={`w-4 h-4 shrink-0 ${isSelected ? 'text-blue-600' : 'text-slate-400'}`} />
+                          <Folder className={`w-4 h-4 shrink-0 ${isSelected ? 'text-[var(--accent-color)]' : 'text-[var(--text-muted)]'}`} />
                           <span className="truncate">{coll}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-slate-400 bg-slate-200 group-hover:hidden px-1.5 py-0.2 rounded-full font-normal">
+                          <span className="text-xs text-[var(--text-muted)] bg-[var(--bg-hover)] group-hover:hidden px-1.5 py-0.2 rounded-full font-normal">
                             {papersCount[coll] || 0}
                           </span>
                           <button 
@@ -179,7 +179,7 @@ export const SidebarPane: React.FC<SidebarPaneProps> = ({
                                 onDeleteCollection(coll);
                               }
                             }}
-                            className="hidden group-hover:block text-slate-400 hover:text-red-600"
+                            className="hidden group-hover:block text-[var(--text-muted)] hover:text-red-500 font-bold"
                             title="Delete Collection"
                           >
                             &times;
@@ -200,15 +200,15 @@ export const SidebarPane: React.FC<SidebarPaneProps> = ({
               }}
               className={`flex items-center justify-between px-2 py-1.5 rounded cursor-pointer transition-colors ${
                 selectedSpecial === 'trash'
-                  ? 'bg-blue-100 text-blue-900 font-medium'
-                  : 'hover:bg-slate-200 text-slate-700'
+                  ? 'bg-[var(--accent-light)] text-[var(--accent-color)] font-medium border-l-2 border-[var(--accent-color)] pl-1.5'
+                  : 'hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
             >
               <div className="flex items-center gap-2">
-                <Trash2 className="w-4 h-4 text-slate-500" />
+                <Trash2 className="w-4 h-4" />
                 <span>Trash</span>
               </div>
-              <span className="text-xs text-slate-400 bg-slate-200 px-1.5 py-0.2 rounded-full font-normal">
+              <span className="text-xs text-[var(--text-muted)] bg-[var(--bg-hover)] px-1.5 py-0.2 rounded-full font-normal">
                 {trashCount}
               </span>
             </div>
@@ -217,8 +217,8 @@ export const SidebarPane: React.FC<SidebarPaneProps> = ({
       </div>
 
       {/* Tags Filter Pane */}
-      <div className="border-t border-slate-200 bg-white p-3 h-52 flex flex-col">
-        <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+      <div className="border-t border-[var(--border-color)] bg-[var(--bg-card)] p-3 h-52 flex flex-col">
+        <div className="flex items-center justify-between text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
           <div className="flex items-center gap-1">
             <Tag className="w-3.5 h-3.5" />
             <span>Tags Filter</span>
@@ -226,7 +226,7 @@ export const SidebarPane: React.FC<SidebarPaneProps> = ({
           {selectedTags.length > 0 && (
             <button 
               onClick={onClearTags}
-              className="text-blue-600 hover:text-blue-800 text-[10px] lowercase font-normal"
+              className="text-[var(--accent-color)] hover:opacity-85 text-[10px] lowercase font-normal"
             >
               clear all
             </button>
@@ -238,27 +238,27 @@ export const SidebarPane: React.FC<SidebarPaneProps> = ({
           value={tagSearch}
           onChange={e => setTagSearch(e.target.value)}
           placeholder="Filter tags..."
-          className="w-full px-2 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:border-blue-500 mb-2"
+          className="w-full px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-hover)] text-[var(--text-primary)] rounded text-xs focus:outline-none focus:border-[var(--accent-color)] mb-2"
         />
 
         <div className="flex-1 overflow-y-auto space-y-1.5">
           {filteredTags.length === 0 ? (
-            <div className="text-slate-400 text-xs italic text-center mt-4">No tags match</div>
+            <div className="text-[var(--text-muted)] text-xs italic text-center mt-4">No tags match</div>
           ) : (
             filteredTags.map(tag => {
               const isChecked = selectedTags.includes(tag);
               return (
                 <label 
                   key={tag}
-                  className={`flex items-center gap-2 px-1.5 py-0.5 rounded text-xs cursor-pointer hover:bg-slate-50 ${
-                    isChecked ? 'text-blue-700 bg-blue-50 font-medium' : 'text-slate-600'
+                  className={`flex items-center gap-2 px-1.5 py-0.5 rounded text-xs cursor-pointer hover:bg-[var(--bg-hover)] ${
+                    isChecked ? 'text-[var(--accent-color)] bg-[var(--accent-light)] font-medium' : 'text-[var(--text-muted)]'
                   }`}
                 >
                   <input 
                     type="checkbox"
                     checked={isChecked}
                     onChange={() => onToggleTag(tag)}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
+                    className="rounded border-[var(--border-color)] text-[var(--accent-color)] focus:ring-[var(--accent-color)] w-3 h-3 bg-transparent"
                   />
                   <span className="truncate">{tag}</span>
                 </label>
