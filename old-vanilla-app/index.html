@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A sleek dark-themed task management dashboard with sidebar navigation and an interactive to-do table.">
+  <title>To-dos — Dashboard</title>
+  <link rel="stylesheet" href="styles.css?v=3">
+  <script>
+    // Diagnostic tool to show fetch failures directly on screen
+    (function() {
+      const originalFetch = window.fetch;
+      window.fetch = function(...args) {
+        return originalFetch(...args).then(response => {
+          if (!response.ok) {
+            console.error('[FETCH ERROR 404/500]', args[0], response.status);
+            showFetchError(args[0] + ' (Status ' + response.status + ')');
+          }
+          return response;
+        }).catch(err => {
+          console.error('[FETCH FAILED]', args[0], err);
+          showFetchError(args[0] + ' (Failed: ' + err.message + ')');
+          throw err;
+        });
+      };
+      
+      function showFetchError(msg) {
+        let debugDiv = document.getElementById('fetch-debug-bar');
+        if (!debugDiv) {
+          debugDiv = document.createElement('div');
+          debugDiv.id = 'fetch-debug-bar';
+          debugDiv.style.position = 'fixed';
+          debugDiv.style.bottom = '10px';
+          debugDiv.style.right = '10px';
+          debugDiv.style.background = 'rgba(255, 0, 0, 0.9)';
+          debugDiv.style.color = 'white';
+          debugDiv.style.padding = '12px 16px';
+          debugDiv.style.borderRadius = '6px';
+          debugDiv.style.zIndex = '100000';
+          debugDiv.style.fontFamily = 'monospace';
+          debugDiv.style.fontSize = '12px';
+          debugDiv.style.boxShadow = '0 4px 15px rgba(0,0,0,0.5)';
+          debugDiv.style.maxHeight = '200px';
+          debugDiv.style.overflowY = 'auto';
+          debugDiv.innerHTML = '<strong style="color: #ffc107; display: block; margin-bottom: 6px;">Network Error Logs:</strong>';
+          document.body.appendChild(debugDiv);
+        }
+        const errorLine = document.createElement('div');
+        errorLine.style.marginTop = '4px';
+        errorLine.textContent = msg;
+        debugDiv.appendChild(errorLine);
+      }
+    })();
+
+    window.getAssetUrl = function(relativePath) {
+      let path = window.location.pathname;
+      const lastSegment = path.substring(path.lastIndexOf('/') + 1);
+      if (path !== '/' && !path.endsWith('/') && !lastSegment.includes('.')) {
+        path += '/';
+      }
+      const directory = path.substring(0, path.lastIndexOf('/') + 1);
+      return window.location.origin + directory + relativePath;
+    };
+  </script>
+
+
+  <!-- EmbedPDF scripts (bundle files are present in lib/ and PDF rendering uses EmbedPDF) -->
+  <script>
+    (async () => {
+      try {
+        const mod = await import(window.getAssetUrl('lib/embedpdf.js'));
+        window.EmbedPDF = mod.default || mod.EmbedPDF || mod;
+        console.log('[EmbedPDF] Loaded locally from lib/embedpdf.js');
+      } catch (e) {
+        console.warn('[EmbedPDF] Failed to load local bundle', e);
+      }
+    })();
+  </script>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Workspace header -->
+    
+    <div style="display: flex; align-items: center; padding-right: 12px; justify-content: space-between;">
+      <div class="workspace-header" id="workspace-header">
+      <div class="workspace-logo" id="workspace-logo-letter">W</div><span class="workspace-name" id="workspace-name-span" contenteditable="true" spellcheck="false" style="outline: none; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Workspace</span>
+    </div>
+      <button class="sidebar-toggle-btn" id="btn-collapse-sidebar" title="Close sidebar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
+    <!-- Icon button row -->
+    <div class="sidebar-icon-row">
+      <button class="icon-btn" id="btn-search" title="Search">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+          <circle cx="7" cy="7" r="4"/>
+          <line x1="10" y1="10" x2="13.5" y2="13.5"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="btn-knowledge-graph" title="Knowledge Graph">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Sidebar Search Container -->
+    <div class="sidebar-search-box" id="sidebar-search-container" style="display: none; padding: 0 12px 10px 12px;">
+      <input type="text" id="sidebar-search-input" placeholder="Search pages..." autocomplete="off">
+    </div>
+
+    <!-- Main Views -->
+    <div class="sidebar-item" id="nav-home">
+      <span class="item-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </span>
+      <span class="item-text">Home</span>
+    </div>
+
+    <div class="sidebar-item" id="nav-library">
+      <span class="item-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2.5 1.5h7.5a1.5 1.5 0 0 1 1.5 1.5v10.5a1.5 1.5 0 0 1-1.5 1.5h-7.5a1.5 1.5 0 0 1-1.5-1.5v-10.5a1.5 1.5 0 0 1 1.5-1.5z"/>
+        <path d="M5.5 4.5h4M5.5 7.5h4M5.5 10.5h2"/>
+      </svg></span>
+      <span class="item-text">Library</span>
+    </div>
+
+    <div class="sidebar-item" id="nav-settings">
+      <span class="item-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg></span>
+      <span class="item-text">Settings</span>
+    </div>
+
+    <!-- Recents (dynamically populated) -->
+    
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; padding-right: 12px; cursor: pointer;" id="header-recents-toggle">
+      <div style="display:flex; align-items:center; gap:4px;">
+        <span id="recents-chevron"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
+        <span>Recents</span>
+      </div>
+    </div>
+    <div id="sidebar-recents"></div>
+
+    <!-- Private (dynamically populated) -->
+    
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; padding-right: 12px;">
+      <span>Folders</span>
+      <button id="btn-add-folder" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px;" title="Add Folder">+</button>
+    </div>
+    <div id="sidebar-private"></div>
+    
+    <div class="sidebar-item sidebar-add" id="nav-add-private">
+      <span class="item-icon">+</span>
+      <span class="item-text">Add new page</span>
+    </div>
+
+    <!-- Spacer -->
+    <div class="sidebar-spacer"></div>
+
+
+
+  </aside>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="main" id="main-content">
+
+    <!-- Top Bar -->
+    <div class="top-bar" id="top-bar">
+      
+      <div class="top-bar-left">
+        <button class="sidebar-toggle-btn" id="btn-expand-sidebar" title="Open sidebar" style="display: none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <span class="breadcrumb-text" id="breadcrumb-name">To-dos</span>
+      </div>
+      <div class="top-bar-right" style="display: flex; align-items: center; gap: 12px;">
+        <button class="top-bar-btn" id="btn-toggle-split" title="Toggle Split Screen Reader" style="background: none; border: none; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 4px; transition: background 0.2s; font-size: 13px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="12" y1="3" x2="12" y2="21"/>
+          </svg>
+          <span>Split Screen</span>
+        </button>
+        <div id="header-pomodoro-container" style="display: none;"></div>
+      </div>
+    </div>
+
+    <!-- Page Content splitscreen wrapper -->
+    <div class="main-split-container" id="main-split-container" style="display: flex; width: 100%; flex: 1; min-height: 0; overflow: hidden;">
+      <div class="split-left-panel" id="split-left-panel" style="flex: 1; height: 100%; min-width: 0; overflow-y: auto;">
+        <div class="page-content" id="page-content"></div>
+      </div>
+      <div class="split-right-panel" id="split-right-panel" style="display: none; width: 50%; height: 100%; min-width: 0; border-left: 1px solid var(--border-input); background: var(--bg-main); flex-direction: column; overflow: hidden; position: relative;">
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Custom Context Menu -->
+<div class="context-menu" id="custom-context-menu" style="display: none;"></div>
+
+
+<!-- Custom Prompt Modal -->
+<div class="modal-overlay" id="custom-prompt-modal" style="display: none; z-index: 10000;">
+  <div class="modal-content" style="width: 320px;">
+    <div class="modal-header">
+      <h3 id="prompt-modal-title">Prompt</h3>
+      <button class="modal-close-btn" id="btn-close-prompt-modal">&times;</button>
+    </div>
+    <div class="modal-body" id="prompt-modal-body" style="padding-top: 10px; padding-bottom: 20px;">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-prompt-cancel">Cancel</button>
+      <button class="btn-primary" id="btn-prompt-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Task Modal Overlay -->
+<div class="modal-overlay" id="task-modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modal-title">New Task</h3>
+      <button class="modal-close-btn" id="btn-close-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="modal-task-name">Task Name</label>
+        <input type="text" id="modal-task-name" placeholder="What needs to be done?" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="modal-task-date">Date</label>
+          <input type="date" id="modal-task-date">
+        </div>
+        <div class="form-group">
+          <label for="modal-task-time">Time (optional)</label>
+          <input type="time" id="modal-task-time">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-modal-cancel">Cancel</button>
+      <button class="btn-primary" id="btn-modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Libraries for DOCX support -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<!-- Sticky Notes Pad Widget -->
+<div class="sticky-pad-drawer" id="sticky-pad-drawer" style="display: none;">
+  <div class="sticky-pad-header">
+    <span>Quick Stickies</span>
+    <button class="sticky-pad-add-btn" id="btn-sticky-add" title="Add note">+</button>
+  </div>
+</div>
+
+<button class="sticky-notes-toggle-btn" id="btn-sticky-toggle" title="Toggle Sticky Notes" style="display: none;">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"/><polyline points="15 3 15 8 20 8"/>
+  </svg>
+</button>
+
+<script src="app.js?v=2"></script>
+</body>
+</html>

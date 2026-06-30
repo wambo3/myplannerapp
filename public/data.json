@@ -1,0 +1,177 @@
+{
+  "papers": [
+    {
+      "id": "2203.02155",
+      "type": "journalArticle",
+      "title": "Training language models to follow instructions with human feedback",
+      "authors": [
+        {"firstName": "Long", "lastName": "Ouyang"},
+        {"firstName": "Jeff", "lastName": "Wu"},
+        {"firstName": "Xu", "lastName": "Jiang"},
+        {"firstName": "Diogo", "lastName": "Almeida"},
+        {"firstName": "Carroll", "lastName": "Wainwright"},
+        {"firstName": "Pamela", "lastName": "Mishkin"},
+        {"firstName": "Chong", "lastName": "Zhang"},
+        {"firstName": "Sandhini", "lastName": "Agarwal"},
+        {"firstName": "Katarina", "lastName": "Slama"},
+        {"firstName": "Alex", "lastName": "Ray"},
+        {"firstName": "John", "lastName": "Schulman"},
+        {"firstName": "Jacob", "lastName": "Hilton"},
+        {"firstName": "Fraser", "lastName": "Kelton"},
+        {"firstName": "Luke", "lastName": "Miller"},
+        {"firstName": "Maddie", "lastName": "Simens"},
+        {"firstName": "Amanda", "lastName": "Askell"},
+        {"firstName": "Peter", "lastName": "Welinder"},
+        {"firstName": "Paul", "lastName": "Christiano"},
+        {"firstName": "Jan", "lastName": "Leike"},
+        {"firstName": "Ryan", "lastName": "Lowe"}
+      ],
+      "abstract": "Making language models larger does not inherently make them better at following a user's intent. For example, large language models can generate outputs that are untruthful, toxic, or simply not helpful to the user. In other words, these models are not aligned with their users. In this paper, we show an avenue for aligning language models with user intent on a wide range of tasks, by fine-tuning with human feedback...",
+      "publication": "arXiv",
+      "date": "2022-03-04",
+      "doi": "10.48550/arXiv.2203.02155",
+      "url": "https://arxiv.org/abs/2203.02155",
+      "pdfPath": "pdfs/2203.02155.pdf",
+      "collections": ["LLM Alignment"],
+      "tags": ["RLHF", "Alignment", "InstructGPT", "GPT-3"],
+      "related": ["2103.00020"],
+      "notes": [
+        {
+          "id": "n1",
+          "title": "InstructGPT Initial Notes",
+          "content": "This paper establishes reinforcement learning from human feedback (RLHF) as a highly successful scaling paradigm for GPT-3 instruction tuning."
+        }
+      ],
+      "dateAdded": "2026-06-30T10:00:00Z",
+      "dateModified": "2026-06-30T10:00:00Z"
+    },
+    {
+      "id": "2006.11239",
+      "type": "journalArticle",
+      "title": "Denoising Diffusion Probabilistic Models",
+      "authors": [
+        {"firstName": "Jonathan", "lastName": "Ho"},
+        {"firstName": "Ajay", "lastName": "Jain"},
+        {"firstName": "Pieter", "lastName": "Abbeel"}
+      ],
+      "abstract": "We present high quality image synthesis results using diffusion probabilistic models, a class of latent variable models inspired by considerations from nonequilibrium thermodynamics. Our best results are obtained on a weighted variational bound designed according to a novel connection between diffusion probabilistic models and denoising score matching with Langevin dynamics...",
+      "publication": "arXiv",
+      "date": "2020-06-19",
+      "doi": "10.48550/arXiv.2006.11239",
+      "url": "https://arxiv.org/abs/2006.11239",
+      "pdfPath": "pdfs/2006.11239.pdf",
+      "collections": ["Diffusion & Generative Models"],
+      "tags": ["Diffusion", "Generative Models", "DDPM", "Thermodynamics"],
+      "related": [],
+      "notes": [
+        {
+          "id": "n2",
+          "title": "DDPM Mathematical Background",
+          "content": "Introduced the simplified variational bound mapping diffusion directly to denoising autoencoders at multiple noise levels."
+        }
+      ],
+      "dateAdded": "2026-06-30T10:05:00Z",
+      "dateModified": "2026-06-30T10:05:00Z"
+    },
+    {
+      "id": "1609.02907",
+      "type": "journalArticle",
+      "title": "Semi-Supervised Classification with Graph Convolutional Networks",
+      "authors": [
+        {"firstName": "Thomas", "lastName": "Kipf"},
+        {"firstName": "Max", "lastName": "Welling"}
+      ],
+      "abstract": "We present a scalable approach for semi-supervised learning on graph-structured data that is based on an efficient variant of convolutional neural networks which operate directly on graphs. We motivate the choice of our convolutional architecture via a localized first-order approximation of spectral graph convolutions...",
+      "publication": "arXiv",
+      "date": "2016-09-22",
+      "doi": "10.48550/arXiv.1609.02907",
+      "url": "https://arxiv.org/abs/1609.02907",
+      "pdfPath": "pdfs/1609.02907.pdf",
+      "collections": ["Graph Neural Networks"],
+      "tags": ["GCN", "GNN", "Semi-Supervised", "Graph Networks"],
+      "related": [],
+      "notes": [
+        {
+          "id": "n3",
+          "title": "Spectral approximation",
+          "content": "First-order spectral formulation provides standard graph convolutional networks baseline."
+        }
+      ],
+      "dateAdded": "2026-06-30T10:10:00Z",
+      "dateModified": "2026-06-30T10:10:00Z"
+    },
+    {
+      "id": "2103.00020",
+      "type": "journalArticle",
+      "title": "Learning Transferable Visual Models From Natural Language Supervision",
+      "authors": [
+        {"firstName": "Alec", "lastName": "Radford"},
+        {"firstName": "Jong Wook", "lastName": "Kim"},
+        {"firstName": "Chris", "lastName": "Hallacy"},
+        {"firstName": "Aditya", "lastName": "Ramesh"},
+        {"firstName": "Gabriel", "lastName": "Goh"},
+        {"firstName": "Sandhini", "lastName": "Agarwal"},
+        {"firstName": "Girish", "lastName": "Sastry"},
+        {"firstName": "Amanda", "lastName": "Askell"},
+        {"firstName": "Pamela", "lastName": "Mishkin"},
+        {"firstName": "Jack", "lastName": "Clark"},
+        {"firstName": "Gretchen", "lastName": "Krueger"},
+        {"firstName": "Ilya", "lastName": "Sutskever"}
+      ],
+      "abstract": "State-of-the-art computer vision systems are trained to predict a fixed set of predetermined object categories. This restricted form of supervision limits their generality and usability since additional labeled data is needed to specify any other visual concept. Learning directly from raw text about images is a promising alternative which leverages a much broader source of supervision...",
+      "publication": "arXiv",
+      "date": "2021-02-26",
+      "doi": "10.48550/arXiv.2103.00020",
+      "url": "https://arxiv.org/abs/2103.00020",
+      "pdfPath": "pdfs/2103.00020.pdf",
+      "collections": ["Multimodal Learning"],
+      "tags": ["CLIP", "Multimodal", "Contrastive Learning", "Zero-Shot"],
+      "related": ["2203.02155"],
+      "notes": [
+        {
+          "id": "n4",
+          "title": "Contrastive training overview",
+          "content": "Contrastive image-text pre-training at scale displays unprecedented zero-shot capability on ImageNet classification."
+        }
+      ],
+      "dateAdded": "2026-06-30T10:15:00Z",
+      "dateModified": "2026-06-30T10:15:00Z"
+    },
+    {
+      "id": "2208.07339",
+      "type": "journalArticle",
+      "title": "LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale",
+      "authors": [
+        {"firstName": "Tim", "lastName": "Dettmers"},
+        {"firstName": "Mike", "lastName": "Lewis"},
+        {"firstName": "Younes", "lastName": "Belkada"},
+        {"firstName": "Luke", "lastName": "Zettlemoyer"}
+      ],
+      "abstract": "Large language models show emergent capabilities at scale, but their massive size makes them extremely expensive for inference. We present LLM.int8(), a quantization method for matrix multiplication in transformers that reduces memory usage by half while preserving model performance. We show that we can quantize matrix multiplication with 8-bit integers without loss in accuracy for models up to 175B parameters...",
+      "publication": "arXiv",
+      "date": "2022-08-15",
+      "doi": "10.48550/arXiv.2208.07339",
+      "url": "https://arxiv.org/abs/2208.07339",
+      "pdfPath": "pdfs/2208.07339.pdf",
+      "collections": ["Efficient Inference & Quantization"],
+      "tags": ["Quantization", "LLM.int8", "Inference", "Efficiency"],
+      "related": [],
+      "notes": [
+        {
+          "id": "n5",
+          "title": "Outlier feature separation",
+          "content": "The core contribution is separating coordinate-wise outlier channels into FP16 matrix multiplication while doing 8-bit quantization on other 99.9% of features."
+        }
+      ],
+      "dateAdded": "2026-06-30T10:20:00Z",
+      "dateModified": "2026-06-30T10:20:00Z"
+    }
+  ],
+  "collections": [
+    "LLM Alignment",
+    "Diffusion & Generative Models",
+    "Graph Neural Networks",
+    "Multimodal Learning",
+    "Efficient Inference & Quantization"
+  ]
+}
