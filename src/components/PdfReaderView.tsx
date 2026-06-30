@@ -53,7 +53,7 @@ export const PdfReaderView: React.FC<PdfReaderViewProps> = ({
   useEffect(() => {
     setLoading(true);
     setPageNumber(paper.currentPage || 1);
-    const pdfUrl = `./pdfs/${paper.id}.pdf`;
+    const pdfUrl = `/pdfs/${paper.id}.pdf`;
     
     // Clear old document state
     setPdfDoc(null);

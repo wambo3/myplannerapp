@@ -307,7 +307,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Load static data.json if library is empty
   useEffect(() => {
     if (state.library.length === 0) {
-      fetch('./data.json')
+      fetch('/data.json')
         .then(res => res.ok ? res.json() : null)
         .then(dataJson => {
           if (dataJson && Array.isArray(dataJson.papers)) {
